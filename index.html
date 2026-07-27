@@ -61,7 +61,7 @@
     </div>
 
     <div class="card-summary">
-      <p>Capital en Riesgos (Stock)</p>
+      <p>Capital en Riesgo (Stock)</p>
       <h2 id="capital-at-risk" class="text-warning">$0</h2>
     </div>
 
@@ -137,6 +137,45 @@
         <!-- Generado dinámicamente -->
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Modal Centrado para Editar Producto -->
+<div id="editModal" class="modal-overlay">
+  <div class="modal-content modal-content-large">
+    <h3>✏️ Editar Producto</h3>
+    <form id="edit-product-form" onsubmit="confirmEdit(event)">
+      <div class="form-grid">
+        <div>
+          <label for="edit-name">Producto</label>
+          <input type="text" id="edit-name" required>
+        </div>
+        <div>
+          <label for="edit-platform">Plataforma</label>
+          <input type="text" id="edit-platform" required>
+        </div>
+        <div>
+          <label for="edit-cost">Costo Compra ($)</label>
+          <input type="number" step="any" id="edit-cost" required>
+        </div>
+        <div>
+          <label for="edit-targetPrice">Venta Obj. ($)</label>
+          <input type="number" step="any" id="edit-targetPrice" required>
+        </div>
+        <div>
+          <label for="edit-productUrl">Link / URL Producto</label>
+          <input type="url" id="edit-productUrl">
+        </div>
+        <div>
+          <label for="edit-buyDate">Fecha Compra</label>
+          <input type="date" id="edit-buyDate" required>
+        </div>
+      </div>
+      <div class="modal-buttons" style="margin-top: 20px;">
+        <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+        <button type="submit" class="btn-confirm">Guardar Cambios</button>
+      </div>
+    </form>
   </div>
 </div>
 

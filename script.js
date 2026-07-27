@@ -15,6 +15,7 @@ const db = firebase.firestore();
 let products = [];
 let pendingSaleDocId = null;
 let pendingDeleteDocId = null;
+let pendingEditDocId = null;
 
 const form = document.getElementById('product-form');
 const inventoryList = document.getElementById('inventory-list');
@@ -140,7 +141,10 @@ function render() {
         </select>
       </td>
       <td>
-        <button class="btn-delete" onclick="openDeleteModal('${prod.id}')">Eliminar</button>
+        <div class="action-buttons">
+          <button class="btn-edit" onclick="openEditModal('${prod.id}')">Editar</button>
+          <button class="btn-delete" onclick="openDeleteModal('${prod.id}')">Eliminar</button>
+        </div>
       </td>
     `;
     inventoryList.appendChild(row);
@@ -178,6 +182,45 @@ form.addEventListener('submit', (e) => {
     buyDateInput.value = new Date().toISOString().split('T')[0];
   });
 });
+
+// Modal y Lógica de Edición
+function openEditModal(docId) {
+  const product = products.find(p => p.id === docId);
+  if (!product) return;
+
+  pendingEditDocId = docId;
+  document.getElementById('edit-name').value = product.name || '';
+  document.getElementById('edit-platform').value = product.platform || '';
+  document.getElementById('edit-cost').value = product.cost || '';
+  document.getElementById('edit-targetPrice').value = product.targetPrice || '';
+  document.getElementById('edit-productUrl').value = product.productUrl || '';
+  document.getElementById('edit-buyDate').value = product.buyDate || '';
+
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  pendingEditDocId = null;
+}
+
+function confirmEdit(e) {
+  e.preventDefault();
+  if (!pendingEditDocId) return;
+
+  const updatedProduct = {
+    name: document.getElementById('edit-name').value,
+    platform: document.getElementById('edit-platform').value,
+    cost: document.getElementById('edit-cost').value,
+    targetPrice: document.getElementById('edit-targetPrice').value,
+    productUrl: document.getElementById('edit-productUrl').value,
+    buyDate: document.getElementById('edit-buyDate').value
+  };
+
+  db.collection("productos").doc(pendingEditDocId).update(updatedProduct).then(() => {
+    closeEditModal();
+  });
+}
 
 // Modales y Acciones
 function handleStatusChange(docId, newStatus, targetPrice) {
