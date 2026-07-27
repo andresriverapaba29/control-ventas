@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Inversiones y Ventas</title>
+  
+  <!-- Optimización para Móvil / Modo App -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Carga de SDKs de Firebase compatibles -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h1>Control de Compras y Ventas</h1>
+
+  <!-- Controles y Filtros -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label for="month-filter">Mes de Compra:</label>
+        <select id="month-filter" onchange="render()">
+          <option value="ALL">Todos los Meses</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="status-filter">Estado:</label>
+        <select id="status-filter" onchange="render()">
+          <option value="ALL">Todos los Estados</option>
+          <option value="Disponible">En Stock</option>
+          <option value="Vendido">Vendidos</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="btn-reset" onclick="resetFilters()">🔄 Ver Todo</button>
+        <button type="button" class="btn-excel" onclick="exportToExcel()">📥 Excel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tarjetas de Métricas -->
+  <div class="summary-grid">
+    <div class="card-summary">
+      <p>Total Invertido</p>
+      <h2 id="total-invested">$0</h2>
+    </div>
+
+    <div class="card-summary">
+      <p>Capital Recuperado</p>
+      <h2 id="capital-recovered" class="text-blue">$0</h2>
+      <span class="sub-text text-green" id="realized-profit-sub">+ $0 de Ganancia</span>
+    </div>
+
+    <div class="card-summary">
+      <p>Capital en Riesgo (Stock)</p>
+      <h2 id="capital-at-risk" class="text-warning">$0</h2>
+    </div>
+
+    <div class="card-summary">
+      <p>Ganancia Proyectada</p>
+      <h2 id="projected-profit">$0</h2>
+    </div>
+  </div>
+
+  <!-- Formulario de Registro -->
+  <div class="form-card">
+    <h3>Registrar Producto</h3>
+    <form id="product-form">
+      <div class="form-grid">
+        <div>
+          <label for="name">Producto</label>
+          <input type="text" id="name" placeholder="Ej: Hidrolavadora" required>
+        </div>
+        <div>
+          <label for="platform">Plataforma</label>
+          <input type="text" id="platform" placeholder="Amazon, MercadoLibre..." required>
+        </div>
+        <div>
+          <label for="cost">Costo Compra ($)</label>
+          <input type="number" step="any" id="cost" placeholder="Ej: 100000" required>
+        </div>
+        <div>
+          <label for="targetPrice">Venta Obj. ($)</label>
+          <input type="number" step="any" id="targetPrice" placeholder="Ej: 150000" required>
+        </div>
+        <div>
+          <label for="productUrl">Link / URL Producto</label>
+          <input type="url" id="productUrl" placeholder="https://amazon.com/...">
+        </div>
+        <div>
+          <label for="buyDate">Fecha Compra</label>
+          <input type="date" id="buyDate" required>
+        </div>
+        <div>
+          <label for="status">Estado</label>
+          <select id="status" onchange="toggleSoldPriceInput(this.value)">
+            <option value="Disponible">Disponible (En stock)</option>
+            <option value="Vendido">Vendido</option>
+          </select>
+        </div>
+        <div id="soldPriceGroup" style="display: none;">
+          <label for="actualSoldPrice">Precio Real Venta ($)</label>
+          <input type="number" step="any" id="actualSoldPrice" placeholder="Ej: 150000">
+        </div>
+      </div>
+      <button type="submit">Agregar Producto</button>
+    </form>
+  </div>
+
+  <!-- Tabla de Inventario -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Plataforma</th>
+          <th>Costo</th>
+          <th>Venta Obj. / Real</th>
+          <th>Ganancia</th>
+          <th>Fecha Compra</th>
+          <th>Tiempo Stock</th>
+          <th>Link</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="inventory-list">
+        <!-- Generado dinámicamente -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Centrado para Registrar Venta -->
+<div id="saleModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>🎉 Confirmar Venta</h3>
+    <p>Ingresa el precio real al que vendiste este producto:</p>
+    <input type="number" id="modalPriceInput" placeholder="Monto vendido">
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="closeSaleModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmSale()">Guardar Venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Centrado para Eliminar Producto -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>⚠️ Eliminar Producto</h3>
+    <p>¿Estás seguro de que deseas eliminar este producto del inventario? Esta acción no se puede deshacer.</p>
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="closeDeleteModal()">Cancelar</button>
+      <button class="btn-delete" style="width: auto; padding: 10px 16px; font-weight: 600;" onclick="confirmDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
