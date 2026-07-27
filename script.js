@@ -21,6 +21,7 @@ const form = document.getElementById('product-form');
 const inventoryList = document.getElementById('inventory-list');
 const monthFilterSelect = document.getElementById('month-filter');
 const statusFilterSelect = document.getElementById('status-filter');
+const searchInput = document.getElementById('search-input');
 const buyDateInput = document.getElementById('buyDate');
 
 buyDateInput.value = new Date().toISOString().split('T')[0];
@@ -52,6 +53,12 @@ function calculateDays(startDateStr, endDateStr) {
   return Math.floor(Math.abs(end - start) / (1000 * 60 * 60 * 24));
 }
 
+function toggleForm() {
+  const isHidden = form.style.display === 'none';
+  form.style.display = isHidden ? 'block' : 'none';
+  document.getElementById('toggle-icon').innerText = isHidden ? '▲' : '▼';
+}
+
 function toggleSoldPriceInput(status) {
   document.getElementById('soldPriceGroup').style.display = status === 'Vendido' ? 'block' : 'none';
 }
@@ -59,6 +66,7 @@ function toggleSoldPriceInput(status) {
 function resetFilters() {
   monthFilterSelect.value = 'ALL';
   statusFilterSelect.value = 'ALL';
+  searchInput.value = '';
   render();
 }
 
@@ -89,17 +97,22 @@ function render() {
   
   const filterMonth = monthFilterSelect.value;
   const filterStatus = statusFilterSelect.value;
+  const query = searchInput.value.toLowerCase().trim();
 
   let totalInvested = 0;
   let capitalRecovered = 0;
   let realizedProfit = 0;
   let capitalAtRisk = 0;
   let projectedProfit = 0;
+  let visibleCount = 0;
 
   products.forEach((prod) => {
+    // Filtros de fecha, estado y buscador
     if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return;
     if (filterStatus !== 'ALL' && prod.status !== filterStatus) return;
+    if (query && !prod.name.toLowerCase().includes(query) && !prod.platform.toLowerCase().includes(query)) return;
 
+    visibleCount++;
     const cost = parseFloat(prod.cost) || 0;
     const targetPrice = parseFloat(prod.targetPrice) || 0;
     const actualPrice = prod.actualPrice ? parseFloat(prod.actualPrice) : targetPrice;
@@ -115,6 +128,7 @@ function render() {
     }
 
     const profit = prod.status === 'Vendido' ? (actualPrice - cost) : (targetPrice - cost);
+    const profitClass = profit >= 0 ? 'text-green' : 'text-red';
     const daysInStock = calculateDays(prod.buyDate, prod.sellDate);
     const timeLabel = prod.status === 'Vendido' 
       ? `<span class="time-badge sold">Vendido en ${daysInStock} d</span>` 
@@ -130,7 +144,7 @@ function render() {
       <td>${escapeHtml(prod.platform)}</td>
       <td>${formatCurrency(cost)}</td>
       <td>${formatCurrency(prod.status === 'Vendido' ? actualPrice : targetPrice)}</td>
-      <td class="text-green">+${formatCurrency(profit)}</td>
+      <td class="${profitClass}">${profit >= 0 ? '+' : ''}${formatCurrency(profit)}</td>
       <td>${prod.buyDate || '-'}</td>
       <td>${timeLabel}</td>
       <td>${linkHtml}</td>
@@ -150,9 +164,16 @@ function render() {
     inventoryList.appendChild(row);
   });
 
+  if (visibleCount === 0) {
+    inventoryList.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
+  }
+
+  const subElem = document.getElementById('realized-profit-sub');
+  subElem.innerText = `${realizedProfit >= 0 ? '+' : ''} ${formatCurrency(realizedProfit)} de Ganancia Real`;
+  subElem.className = `sub-text ${realizedProfit >= 0 ? 'text-green' : 'text-red'}`;
+
   document.getElementById('total-invested').innerText = formatCurrency(totalInvested);
   document.getElementById('capital-recovered').innerText = formatCurrency(capitalRecovered);
-  document.getElementById('realized-profit-sub').innerText = `+ ${formatCurrency(realizedProfit)} de Ganancia Real`;
   document.getElementById('capital-at-risk').innerText = formatCurrency(capitalAtRisk);
   document.getElementById('projected-profit').innerText = formatCurrency(projectedProfit);
 }
@@ -180,6 +201,7 @@ form.addEventListener('submit', (e) => {
     form.reset();
     toggleSoldPriceInput('Disponible');
     buyDateInput.value = new Date().toISOString().split('T')[0];
+    toggleForm(); // Ocultar formulario tras agregar
   });
 });
 
@@ -222,7 +244,7 @@ function confirmEdit(e) {
   });
 }
 
-// Modales y Acciones
+// Modales de Venta y Eliminación
 function handleStatusChange(docId, newStatus, targetPrice) {
   if (newStatus === 'Vendido') {
     pendingSaleDocId = docId;

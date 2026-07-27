@@ -25,6 +25,11 @@
   <div class="filter-card">
     <div class="filter-grid">
       <div class="filter-group">
+        <label for="search-input">Buscar Producto / Plataforma:</label>
+        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Amazon..." oninput="render()">
+      </div>
+
+      <div class="filter-group">
         <label for="month-filter">Mes de Compra:</label>
         <select id="month-filter" onchange="render()">
           <option value="ALL">Todos los Meses</option>
@@ -57,7 +62,7 @@
     <div class="card-summary">
       <p>Capital Recuperado</p>
       <h2 id="capital-recovered" class="text-blue">$0</h2>
-      <span class="sub-text text-green" id="realized-profit-sub">+ $0 de Ganancia</span>
+      <span class="sub-text" id="realized-profit-sub">+ $0 de Ganancia</span>
     </div>
 
     <div class="card-summary">
@@ -71,10 +76,14 @@
     </div>
   </div>
 
-  <!-- Formulario de Registro -->
+  <!-- Formulario de Registro Plegable -->
   <div class="form-card">
-    <h3>Registrar Producto</h3>
-    <form id="product-form">
+    <div class="form-header" onclick="toggleForm()">
+      <h3>➕ Registrar Producto</h3>
+      <span id="toggle-icon">▼</span>
+    </div>
+    
+    <form id="product-form" style="display: none; margin-top: 15px;">
       <div class="form-grid">
         <div>
           <label for="name">Producto</label>
@@ -112,7 +121,7 @@
           <input type="number" step="any" id="actualSoldPrice" placeholder="Ej: 150000">
         </div>
       </div>
-      <button type="submit">Agregar Producto</button>
+      <button type="submit">Guardar Producto</button>
     </form>
   </div>
 
@@ -130,7 +139,7 @@
           <th>Tiempo Stock</th>
           <th>Link</th>
           <th>Estado</th>
-          <th>Acción</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody id="inventory-list">
@@ -196,10 +205,10 @@
 <div id="deleteModal" class="modal-overlay">
   <div class="modal-content">
     <h3>⚠️ Eliminar Producto</h3>
-    <p>¿Estás seguro de que deseas eliminar este producto del inventario? Esta acción no se puede deshacer.</p>
+    <p>¿Estás seguro de que deseas eliminar este producto del inventario?</p>
     <div class="modal-buttons">
       <button class="btn-cancel" onclick="closeDeleteModal()">Cancelar</button>
-      <button class="btn-delete" style="width: auto; padding: 10px 16px; font-weight: 600;" onclick="confirmDelete()">Eliminar</button>
+      <button class="btn-delete" style="width: auto; padding: 10px 16px;" onclick="confirmDelete()">Eliminar</button>
     </div>
   </div>
 </div>
