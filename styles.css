@@ -25,7 +25,7 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -232,6 +232,21 @@ th {
   color: #15803d;
 }
 
+/* Badges de Devolución */
+.return-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.return-badge.transit { background-color: #eff6ff; color: #1d4ed8; }
+.return-badge.safe { background-color: #dcfce7; color: #15803d; }
+.return-badge.warning { background-color: #fef3c7; color: #b45309; }
+.return-badge.expired { background-color: #fee2e2; color: #b91c1c; }
+.return-badge.na { background-color: #f3f4f6; color: #6b7280; }
+
 .link-btn {
   color: var(--primary);
   text-decoration: none;
@@ -244,10 +259,12 @@ th {
 }
 
 .select-status {
-  padding: 4px 6px;
+  padding: 5px 8px;
   font-size: 0.82rem;
   border-radius: 6px;
   border: 1px solid var(--border);
+  min-width: 110px; /* <--- Agrega esto para darle ancho suficiente */
+  cursor: pointer;
 }
 
 .action-buttons {

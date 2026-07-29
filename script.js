@@ -50,7 +50,32 @@ function calculateDays(startDateStr, endDateStr) {
   const end = endDateStr ? new Date(endDateStr) : new Date();
   start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
-  return Math.floor(Math.abs(end - start) / (1000 * 60 * 60 * 24));
+  return Math.floor((end - start) / (1000 * 60 * 60 * 24));
+}
+
+function calculateReturnStatus(arrivalDateStr, status) {
+  if (status === 'Vendido') {
+    return `<span class="return-badge na">N/A (Vendido)</span>`;
+  }
+  if (!arrivalDateStr) {
+    return `<span class="return-badge transit">🚚 En camino</span>`;
+  }
+
+  const arrivalDate = new Date(arrivalDateStr);
+  const today = new Date();
+  arrivalDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  const daysElapsed = Math.floor((today - arrivalDate) / (1000 * 60 * 60 * 24));
+  const daysRemaining = 30 - daysElapsed;
+
+  if (daysRemaining < 0) {
+    return `<span class="return-badge expired">🔴 Plazo vencido</span>`;
+  } else if (daysRemaining <= 10) {
+    return `<span class="return-badge warning">🟠 ${daysRemaining} d. restantes</span>`;
+  } else {
+    return `<span class="return-badge safe">🟢 ${daysRemaining} d. restantes</span>`;
+  }
 }
 
 function toggleForm() {
@@ -134,6 +159,8 @@ function render() {
       ? `<span class="time-badge sold">Vendido en ${daysInStock} d</span>` 
       : `<span class="time-badge">${daysInStock} d en stock</span>`;
 
+    const returnBadge = calculateReturnStatus(prod.arrivalDate, prod.status);
+
     const linkHtml = prod.productUrl 
       ? `<a href="${escapeHtml(prod.productUrl)}" target="_blank" class="link-btn">🔗 Ver</a>` 
       : `<span class="link-btn disabled">Sin link</span>`;
@@ -147,6 +174,7 @@ function render() {
       <td class="${profitClass}">${profit >= 0 ? '+' : ''}${formatCurrency(profit)}</td>
       <td>${prod.buyDate || '-'}</td>
       <td>${timeLabel}</td>
+      <td>${returnBadge}</td>
       <td>${linkHtml}</td>
       <td>
         <select class="select-status" onchange="handleStatusChange('${prod.id}', this.value, ${targetPrice})">
@@ -165,7 +193,7 @@ function render() {
   });
 
   if (visibleCount === 0) {
-    inventoryList.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
+    inventoryList.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
   }
 
   const subElem = document.getElementById('realized-profit-sub');
@@ -193,6 +221,7 @@ form.addEventListener('submit', (e) => {
     actualPrice: status === 'Vendido' && actualSoldPrice ? actualSoldPrice : null,
     productUrl: document.getElementById('productUrl').value,
     buyDate: document.getElementById('buyDate').value,
+    arrivalDate: null,
     sellDate: status === 'Vendido' ? new Date().toISOString().split('T')[0] : null,
     status: status
   };
@@ -201,7 +230,7 @@ form.addEventListener('submit', (e) => {
     form.reset();
     toggleSoldPriceInput('Disponible');
     buyDateInput.value = new Date().toISOString().split('T')[0];
-    toggleForm(); // Ocultar formulario tras agregar
+    toggleForm();
   });
 });
 
@@ -217,6 +246,7 @@ function openEditModal(docId) {
   document.getElementById('edit-targetPrice').value = product.targetPrice || '';
   document.getElementById('edit-productUrl').value = product.productUrl || '';
   document.getElementById('edit-buyDate').value = product.buyDate || '';
+  document.getElementById('edit-arrivalDate').value = product.arrivalDate || '';
 
   document.getElementById('editModal').style.display = 'flex';
 }
@@ -236,7 +266,8 @@ function confirmEdit(e) {
     cost: document.getElementById('edit-cost').value,
     targetPrice: document.getElementById('edit-targetPrice').value,
     productUrl: document.getElementById('edit-productUrl').value,
-    buyDate: document.getElementById('edit-buyDate').value
+    buyDate: document.getElementById('edit-buyDate').value,
+    arrivalDate: document.getElementById('edit-arrivalDate').value || null
   };
 
   db.collection("productos").doc(pendingEditDocId).update(updatedProduct).then(() => {
@@ -299,7 +330,7 @@ function confirmDelete() {
 function exportToExcel() {
   if (products.length === 0) return alert("No hay productos para exportar.");
 
-  let csvContent = "\uFEFFProducto;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;Fecha Compra;Fecha Venta;Dias en Stock;Estado;Link\n";
+  let csvContent = "\uFEFFProducto;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;Fecha Compra;Fecha Llegada;Fecha Venta;Dias en Stock;Estado;Link\n";
 
   products.forEach(p => {
     const cost = parseFloat(p.cost) || 0;
@@ -308,7 +339,7 @@ function exportToExcel() {
     const profit = p.status === 'Vendido' ? (actual - cost) : (target - cost);
     const days = calculateDays(p.buyDate, p.sellDate);
 
-    csvContent += `"${p.name}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};"${p.buyDate}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
+    csvContent += `"${p.name}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};"${p.buyDate}";"${p.arrivalDate || '-'}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
   });
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
