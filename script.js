@@ -154,10 +154,23 @@ function render() {
 
     const profit = prod.status === 'Vendido' ? (actualPrice - cost) : (targetPrice - cost);
     const profitClass = profit >= 0 ? 'text-green' : 'text-red';
-    const daysInStock = calculateDays(prod.buyDate, prod.sellDate);
-    const timeLabel = prod.status === 'Vendido' 
-      ? `<span class="time-badge sold">Vendido en ${daysInStock} d</span>` 
-      : `<span class="time-badge">${daysInStock} d en stock</span>`;
+    
+
+    let timeLabel = '';
+
+    if (prod.status === 'Vendido') {
+      // Si se vendió, calcula desde que llegó (o desde la compra si no tenía llegada) hasta que se vendió
+      const startDate = prod.arrivalDate || prod.buyDate;
+      const daysInStock = calculateDays(startDate, prod.sellDate);
+      timeLabel = `<span class="time-badge sold">Vendido en ${daysInStock} d</span>`;
+    } else if (prod.arrivalDate) {
+      // Si sigue disponible y YA llegó, calcula los días desde que llegó a tu casa
+      const daysInStock = calculateDays(prod.arrivalDate, null);
+      timeLabel = `<span class="time-badge">${daysInStock} d en stock</span>`;
+    } else {
+      // Si no ha llegado aún, muestra que está en camino
+      timeLabel = `<span class="time-badge">🚚 En camino</span>`;
+    }
 
     const returnBadge = calculateReturnStatus(prod.arrivalDate, prod.status);
 
@@ -356,4 +369,4 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.innerText = text;
   return div.innerHTML;
-}
+}const daysInStock = calculateDays(prod.buyDate, prod.sellDate);
