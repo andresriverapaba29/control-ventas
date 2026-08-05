@@ -1,4 +1,3 @@
-// Credenciales de tu Proyecto Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCE6i1aLAzB2n_AZaNlohwH7ikr_8Z7dhM",
   authDomain: "control-ventas-app-cd82b.firebaseapp.com",
@@ -8,7 +7,6 @@ const firebaseConfig = {
   appId: "1:93145997049:web:df17391f11f971120c0c28"
 };
 
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -26,7 +24,6 @@ const buyDateInput = document.getElementById('buyDate');
 
 buyDateInput.value = new Date().toISOString().split('T')[0];
 
-// Escuchar cambios en tiempo real desde Firestore
 db.collection("productos").onSnapshot((snapshot) => {
   products = snapshot.docs.map(doc => ({
     id: doc.id,
@@ -53,6 +50,16 @@ function calculateDays(startDateStr, endDateStr) {
   return Math.floor((end - start) / (1000 * 60 * 60 * 24));
 }
 
+function getReturnRemainingDays(arrivalDateStr) {
+  if (!arrivalDateStr) return 999; // Si está en camino, se mantiene abajo en ordenamiento
+  const arrivalDate = new Date(arrivalDateStr);
+  const today = new Date();
+  arrivalDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  const daysElapsed = Math.floor((today - arrivalDate) / (1000 * 60 * 60 * 24));
+  return 30 - daysElapsed;
+}
+
 function calculateReturnStatus(arrivalDateStr, status) {
   if (status === 'Vendido') {
     return `<span class="return-badge na">N/A (Vendido)</span>`;
@@ -61,13 +68,7 @@ function calculateReturnStatus(arrivalDateStr, status) {
     return `<span class="return-badge transit">🚚 En camino</span>`;
   }
 
-  const arrivalDate = new Date(arrivalDateStr);
-  const today = new Date();
-  arrivalDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-
-  const daysElapsed = Math.floor((today - arrivalDate) / (1000 * 60 * 60 * 24));
-  const daysRemaining = 30 - daysElapsed;
+  const daysRemaining = getReturnRemainingDays(arrivalDateStr);
 
   if (daysRemaining < 0) {
     return `<span class="return-badge expired">🔴 Plazo vencido</span>`;
@@ -129,10 +130,21 @@ function render() {
   let realizedProfit = 0;
   let capitalAtRisk = 0;
   let projectedProfit = 0;
+  let unitsInStock = 0;
   let visibleCount = 0;
 
-  products.forEach((prod) => {
-    // Filtros de fecha, estado y buscador
+  // Ordenar productos: Primero 'Disponibles' ordenados por urgencia de devolución, luego 'Vendidos'
+  const sortedProducts = [...products].sort((a, b) => {
+    if (a.status !== b.status) {
+      return a.status === 'Disponible' ? -1 : 1;
+    }
+    if (a.status === 'Disponible') {
+      return getReturnRemainingDays(a.arrivalDate) - getReturnRemainingDays(b.arrivalDate);
+    }
+    return 0;
+  });
+
+  sortedProducts.forEach((prod) => {
     if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return;
     if (filterStatus !== 'ALL' && prod.status !== filterStatus) return;
     if (query && !prod.name.toLowerCase().includes(query) && !prod.platform.toLowerCase().includes(query)) return;
@@ -150,25 +162,32 @@ function render() {
     } else {
       capitalAtRisk += cost;
       projectedProfit += (targetPrice - cost);
+      unitsInStock++;
     }
 
     const profit = prod.status === 'Vendido' ? (actualPrice - cost) : (targetPrice - cost);
-    const profitClass = profit >= 0 ? 'text-green' : 'text-red';
     
-
-    let timeLabel = '';
+    // Diferenciación de colores en la Ganancia
+    let profitClass = '';
+    let profitLabel = '';
 
     if (prod.status === 'Vendido') {
-      // Si se vendió, calcula desde que llegó (o desde la compra si no tenía llegada) hasta que se vendió
+      profitClass = profit >= 0 ? 'text-green' : 'text-red';
+      profitLabel = `${profit >= 0 ? '+' : ''}${formatCurrency(profit)} Real`;
+    } else {
+      profitClass = profit >= 0 ? 'text-est' : 'text-red';
+      profitLabel = `${profit >= 0 ? '+' : ''}${formatCurrency(profit)} Est.`;
+    }
+
+    let timeLabel = '';
+    if (prod.status === 'Vendido') {
       const startDate = prod.arrivalDate || prod.buyDate;
       const daysInStock = calculateDays(startDate, prod.sellDate);
       timeLabel = `<span class="time-badge sold">Vendido en ${daysInStock} d</span>`;
     } else if (prod.arrivalDate) {
-      // Si sigue disponible y YA llegó, calcula los días desde que llegó a tu casa
       const daysInStock = calculateDays(prod.arrivalDate, null);
       timeLabel = `<span class="time-badge">${daysInStock} d en stock</span>`;
     } else {
-      // Si no ha llegado aún, muestra que está en camino
       timeLabel = `<span class="time-badge">🚚 En camino</span>`;
     }
 
@@ -179,12 +198,14 @@ function render() {
       : `<span class="link-btn disabled">Sin link</span>`;
 
     const row = document.createElement('tr');
+    if (prod.status === 'Vendido') row.className = 'row-sold';
+
     row.innerHTML = `
       <td><strong>${escapeHtml(prod.name)}</strong></td>
       <td>${escapeHtml(prod.platform)}</td>
       <td>${formatCurrency(cost)}</td>
       <td>${formatCurrency(prod.status === 'Vendido' ? actualPrice : targetPrice)}</td>
-      <td class="${profitClass}">${profit >= 0 ? '+' : ''}${formatCurrency(profit)}</td>
+      <td class="${profitClass}">${profitLabel}</td>
       <td>${prod.buyDate || '-'}</td>
       <td>${timeLabel}</td>
       <td>${returnBadge}</td>
@@ -216,10 +237,10 @@ function render() {
   document.getElementById('total-invested').innerText = formatCurrency(totalInvested);
   document.getElementById('capital-recovered').innerText = formatCurrency(capitalRecovered);
   document.getElementById('capital-at-risk').innerText = formatCurrency(capitalAtRisk);
+  document.getElementById('units-in-stock').innerText = `${unitsInStock} producto${unitsInStock !== 1 ? 's' : ''} en stock`;
   document.getElementById('projected-profit').innerText = formatCurrency(projectedProfit);
 }
 
-// Formulario Agregar
 form.addEventListener('submit', (e) => {
   e.preventDefault();
 
@@ -247,7 +268,6 @@ form.addEventListener('submit', (e) => {
   });
 });
 
-// Modal y Lógica de Edición
 function openEditModal(docId) {
   const product = products.find(p => p.id === docId);
   if (!product) return;
@@ -288,7 +308,6 @@ function confirmEdit(e) {
   });
 }
 
-// Modales de Venta y Eliminación
 function handleStatusChange(docId, newStatus, targetPrice) {
   if (newStatus === 'Vendido') {
     pendingSaleDocId = docId;
@@ -369,4 +388,4 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.innerText = text;
   return div.innerHTML;
-}const daysInStock = calculateDays(prod.buyDate, prod.sellDate);
+}
