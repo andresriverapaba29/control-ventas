@@ -51,7 +51,7 @@ function calculateDays(startDateStr, endDateStr) {
 }
 
 function getReturnRemainingDays(arrivalDateStr) {
-  if (!arrivalDateStr) return 999; // Si está en camino, se mantiene abajo en ordenamiento
+  if (!arrivalDateStr) return 999;
   const arrivalDate = new Date(arrivalDateStr);
   const today = new Date();
   arrivalDate.setHours(0, 0, 0, 0);
@@ -134,7 +134,6 @@ function render() {
   let unitsSold = 0;
   let visibleCount = 0;
 
-  // Ordenar productos: Primero 'Disponibles' ordenados por urgencia de devolución, luego 'Vendidos'
   const sortedProducts = [...products].sort((a, b) => {
     if (a.status !== b.status) {
       return a.status === 'Disponible' ? -1 : 1;
@@ -169,7 +168,6 @@ function render() {
 
     const profit = prod.status === 'Vendido' ? (actualPrice - cost) : (targetPrice - cost);
     
-    // Diferenciación de colores en la Ganancia
     let profitClass = '';
     let profitLabel = '';
 
@@ -239,9 +237,11 @@ function render() {
   document.getElementById('total-invested').innerText = formatCurrency(totalInvested);
   document.getElementById('capital-recovered').innerText = formatCurrency(capitalRecovered);
   document.getElementById('capital-at-risk').innerText = formatCurrency(capitalAtRisk);
+  
   document.getElementById('units-in-stock').innerText = `${unitsInStock} producto${unitsInStock !== 1 ? 's' : ''} en stock`;
-  document.getElementById('projected-profit').innerText = formatCurrency(projectedProfit);
   document.getElementById('units-sold').innerText = `${unitsSold} producto${unitsSold !== 1 ? 's' : ''} vendido${unitsSold !== 1 ? 's' : ''}`;
+  
+  document.getElementById('projected-profit').innerText = formatCurrency(projectedProfit);
 }
 
 form.addEventListener('submit', (e) => {

@@ -118,7 +118,7 @@ h1 {
 }
 
 .text-green { color: var(--success); font-weight: 700; }
-.text-est { color: #0284c7; font-weight: 700; } /* Azul suave para ganancias estimadas */
+.text-est { color: #0284c7; font-weight: 700; }
 .text-red { color: var(--danger); font-weight: 700; }
 .text-blue { color: var(--primary); }
 .text-warning { color: var(--warning); }
@@ -218,7 +218,6 @@ th {
   color: #4b5563;
 }
 
-/* Fila especial para productos Vendidos */
 tr.row-sold {
   background-color: #f8fafc;
   opacity: 0.85;
