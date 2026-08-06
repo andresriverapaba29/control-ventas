@@ -131,6 +131,7 @@ function render() {
   let capitalAtRisk = 0;
   let projectedProfit = 0;
   let unitsInStock = 0;
+  let unitsSold = 0;
   let visibleCount = 0;
 
   // Ordenar productos: Primero 'Disponibles' ordenados por urgencia de devolución, luego 'Vendidos'
@@ -159,6 +160,7 @@ function render() {
     if (prod.status === 'Vendido') {
       capitalRecovered += actualPrice;
       realizedProfit += (actualPrice - cost);
+      unitsSold++;
     } else {
       capitalAtRisk += cost;
       projectedProfit += (targetPrice - cost);
@@ -239,6 +241,7 @@ function render() {
   document.getElementById('capital-at-risk').innerText = formatCurrency(capitalAtRisk);
   document.getElementById('units-in-stock').innerText = `${unitsInStock} producto${unitsInStock !== 1 ? 's' : ''} en stock`;
   document.getElementById('projected-profit').innerText = formatCurrency(projectedProfit);
+  document.getElementById('units-sold').innerText = `${unitsSold} producto${unitsSold !== 1 ? 's' : ''} vendido${unitsSold !== 1 ? 's' : ''}`;
 }
 
 form.addEventListener('submit', (e) => {
