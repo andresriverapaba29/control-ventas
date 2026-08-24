@@ -40,6 +40,7 @@
           <option value="ALL">Todos los Estados</option>
           <option value="Disponible">En Stock</option>
           <option value="Vendido">Vendidos</option>
+          <option value="Devuelto">Devueltos</option>
         </select>
       </div>
 
@@ -114,6 +115,7 @@
           <select id="status" onchange="toggleSoldPriceInput(this.value)">
             <option value="Disponible">Disponible (En stock)</option>
             <option value="Vendido">Vendido</option>
+            <option value="Devuelto">Devuelto a tienda</option>
           </select>
         </div>
         <div id="soldPriceGroup" style="display: none;">
@@ -134,7 +136,7 @@
           <th>Plataforma</th>
           <th>Costo</th>
           <th>Venta Obj. / Real</th>
-          <th>Ganancia</th>
+          <th>Ganancia / ROI</th>
           <th>Fecha Compra</th>
           <th>Tiempo Stock</th>
           <th>Plazo Devolución</th>

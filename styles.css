@@ -223,6 +223,18 @@ tr.row-sold {
   opacity: 0.85;
 }
 
+tr.row-returned {
+  background-color: #f3f4f6;
+  opacity: 0.75;
+}
+
+.roi-badge {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
 .time-badge {
   display: inline-block;
   padding: 3px 8px;
@@ -236,6 +248,11 @@ tr.row-sold {
 .time-badge.sold {
   background-color: #dcfce7;
   color: #15803d;
+}
+
+.time-badge.returned {
+  background-color: #e5e7eb;
+  color: #4b5563;
 }
 
 /* Badges de Devolución */
@@ -269,23 +286,36 @@ tr.row-sold {
   font-size: 0.82rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  min-width: 110px;
+  min-width: 115px;
   cursor: pointer;
 }
 
 .action-buttons {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
+
+.btn-duplicate {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.btn-duplicate:hover { background-color: #4f46e5; }
 
 .btn-edit {
   background: #f59e0b;
   color: white;
   border: none;
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
 }
 
@@ -295,10 +325,10 @@ tr.row-sold {
   background: var(--danger);
   color: white;
   border: none;
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
 }
 

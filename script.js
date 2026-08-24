@@ -61,22 +61,14 @@ function getReturnRemainingDays(arrivalDateStr) {
 }
 
 function calculateReturnStatus(arrivalDateStr, status) {
-  if (status === 'Vendido') {
-    return `<span class="return-badge na">N/A (Vendido)</span>`;
-  }
-  if (!arrivalDateStr) {
-    return `<span class="return-badge transit">🚚 En camino</span>`;
-  }
+  if (status === 'Vendido') return `<span class="return-badge na">N/A (Vendido)</span>`;
+  if (status === 'Devuelto') return `<span class="return-badge na">Devuelto</span>`;
+  if (!arrivalDateStr) return `<span class="return-badge transit">🚚 En camino</span>`;
 
   const daysRemaining = getReturnRemainingDays(arrivalDateStr);
-
-  if (daysRemaining < 0) {
-    return `<span class="return-badge expired">🔴 Plazo vencido</span>`;
-  } else if (daysRemaining <= 10) {
-    return `<span class="return-badge warning">🟠 ${daysRemaining} d. restantes</span>`;
-  } else {
-    return `<span class="return-badge safe">🟢 ${daysRemaining} d. restantes</span>`;
-  }
+  if (daysRemaining < 0) return `<span class="return-badge expired">🔴 Plazo vencido</span>`;
+  if (daysRemaining <= 10) return `<span class="return-badge warning">🟠 ${daysRemaining} d. restantes</span>`;
+  return `<span class="return-badge safe">🟢 ${daysRemaining} d. restantes</span>`;
 }
 
 function toggleForm() {
@@ -136,7 +128,10 @@ function render() {
 
   const sortedProducts = [...products].sort((a, b) => {
     if (a.status !== b.status) {
-      return a.status === 'Disponible' ? -1 : 1;
+      if (a.status === 'Disponible') return -1;
+      if (b.status === 'Disponible') return 1;
+      if (a.status === 'Vendido') return -1;
+      return 1;
     }
     if (a.status === 'Disponible') {
       return getReturnRemainingDays(a.arrivalDate) - getReturnRemainingDays(b.arrivalDate);
@@ -156,27 +151,37 @@ function render() {
 
     totalInvested += cost;
 
-    if (prod.status === 'Vendido') {
-      capitalRecovered += actualPrice;
-      realizedProfit += (actualPrice - cost);
-      unitsSold++;
-    } else {
-      capitalAtRisk += cost;
-      projectedProfit += (targetPrice - cost);
-      unitsInStock++;
-    }
-
-    const profit = prod.status === 'Vendido' ? (actualPrice - cost) : (targetPrice - cost);
-    
+    let profit = 0;
     let profitClass = '';
     let profitLabel = '';
+    let roiHtml = '';
 
     if (prod.status === 'Vendido') {
+      capitalRecovered += actualPrice;
+      const netGain = (actualPrice - cost);
+      realizedProfit += netGain;
+      unitsSold++;
+      profit = netGain;
+      const roi = cost > 0 ? ((netGain / cost) * 100).toFixed(1) : 0;
       profitClass = profit >= 0 ? 'text-green' : 'text-red';
       profitLabel = `${profit >= 0 ? '+' : ''}${formatCurrency(profit)} Real`;
+      roiHtml = `<span class="roi-badge ${profitClass}">${roi >= 0 ? '+' : ''}${roi}% ROI</span>`;
+    } else if (prod.status === 'Devuelto') {
+      capitalRecovered += cost; // Reembolso 100% de la inversión
+      profit = 0;
+      profitClass = 'text-gray';
+      profitLabel = `$0 (Devuelto)`;
+      roiHtml = `<span class="roi-badge text-gray">0.0% ROI</span>`;
     } else {
+      capitalAtRisk += cost;
+      const projGain = (targetPrice - cost);
+      projectedProfit += projGain;
+      unitsInStock++;
+      profit = projGain;
+      const roi = cost > 0 ? ((projGain / cost) * 100).toFixed(1) : 0;
       profitClass = profit >= 0 ? 'text-est' : 'text-red';
       profitLabel = `${profit >= 0 ? '+' : ''}${formatCurrency(profit)} Est.`;
+      roiHtml = `<span class="roi-badge ${profitClass}">${roi >= 0 ? '+' : ''}${roi}% ROI</span>`;
     }
 
     let timeLabel = '';
@@ -184,6 +189,8 @@ function render() {
       const startDate = prod.arrivalDate || prod.buyDate;
       const daysInStock = calculateDays(startDate, prod.sellDate);
       timeLabel = `<span class="time-badge sold">Vendido en ${daysInStock} d</span>`;
+    } else if (prod.status === 'Devuelto') {
+      timeLabel = `<span class="time-badge returned">📦 Reembolsado</span>`;
     } else if (prod.arrivalDate) {
       const daysInStock = calculateDays(prod.arrivalDate, null);
       timeLabel = `<span class="time-badge">${daysInStock} d en stock</span>`;
@@ -199,13 +206,17 @@ function render() {
 
     const row = document.createElement('tr');
     if (prod.status === 'Vendido') row.className = 'row-sold';
+    if (prod.status === 'Devuelto') row.className = 'row-returned';
 
     row.innerHTML = `
       <td><strong>${escapeHtml(prod.name)}</strong></td>
       <td>${escapeHtml(prod.platform)}</td>
       <td>${formatCurrency(cost)}</td>
       <td>${formatCurrency(prod.status === 'Vendido' ? actualPrice : targetPrice)}</td>
-      <td class="${profitClass}">${profitLabel}</td>
+      <td>
+        <span class="${profitClass}">${profitLabel}</span>
+        ${roiHtml}
+      </td>
       <td>${prod.buyDate || '-'}</td>
       <td>${timeLabel}</td>
       <td>${returnBadge}</td>
@@ -214,10 +225,12 @@ function render() {
         <select class="select-status" onchange="handleStatusChange('${prod.id}', this.value, ${targetPrice})">
           <option value="Disponible" ${prod.status === 'Disponible' ? 'selected' : ''}>Disponible</option>
           <option value="Vendido" ${prod.status === 'Vendido' ? 'selected' : ''}>Vendido</option>
+          <option value="Devuelto" ${prod.status === 'Devuelto' ? 'selected' : ''}>Devuelto</option>
         </select>
       </td>
       <td>
         <div class="action-buttons">
+          <button class="btn-duplicate" title="Duplicar producto" onclick="duplicateProduct('${prod.id}')">Copiar</button>
           <button class="btn-edit" onclick="openEditModal('${prod.id}')">Editar</button>
           <button class="btn-delete" onclick="openDeleteModal('${prod.id}')">Eliminar</button>
         </div>
@@ -271,6 +284,26 @@ form.addEventListener('submit', (e) => {
   });
 });
 
+function duplicateProduct(docId) {
+  const original = products.find(p => p.id === docId);
+  if (!original) return;
+
+  const duplicated = {
+    name: original.name,
+    platform: original.platform,
+    cost: original.cost,
+    targetPrice: original.targetPrice,
+    productUrl: original.productUrl || '',
+    buyDate: original.buyDate,
+    arrivalDate: original.arrivalDate || null,
+    sellDate: null,
+    actualPrice: null,
+    status: 'Disponible'
+  };
+
+  db.collection("productos").add(duplicated);
+}
+
 function openEditModal(docId) {
   const product = products.find(p => p.id === docId);
   if (!product) return;
@@ -316,6 +349,12 @@ function handleStatusChange(docId, newStatus, targetPrice) {
     pendingSaleDocId = docId;
     document.getElementById('modalPriceInput').value = targetPrice;
     document.getElementById('saleModal').style.display = 'flex';
+  } else if (newStatus === 'Devuelto') {
+    db.collection("productos").doc(docId).update({
+      status: 'Devuelto',
+      actualPrice: null,
+      sellDate: new Date().toISOString().split('T')[0]
+    });
   } else {
     db.collection("productos").doc(docId).update({
       status: 'Disponible',
@@ -365,16 +404,17 @@ function confirmDelete() {
 function exportToExcel() {
   if (products.length === 0) return alert("No hay productos para exportar.");
 
-  let csvContent = "\uFEFFProducto;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;Fecha Compra;Fecha Llegada;Fecha Venta;Dias en Stock;Estado;Link\n";
+  let csvContent = "\uFEFFProducto;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;ROI (%);Fecha Compra;Fecha Llegada;Fecha Venta;Dias en Stock;Estado;Link\n";
 
   products.forEach(p => {
     const cost = parseFloat(p.cost) || 0;
     const target = parseFloat(p.targetPrice) || 0;
     const actual = p.actualPrice ? parseFloat(p.actualPrice) : target;
-    const profit = p.status === 'Vendido' ? (actual - cost) : (target - cost);
+    const profit = p.status === 'Vendido' ? (actual - cost) : (p.status === 'Devuelto' ? 0 : target - cost);
+    const roi = cost > 0 ? ((profit / cost) * 100).toFixed(1) : '0';
     const days = calculateDays(p.buyDate, p.sellDate);
 
-    csvContent += `"${p.name}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};"${p.buyDate}";"${p.arrivalDate || '-'}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
+    csvContent += `"${p.name}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};${roi}%;"${p.buyDate}";"${p.arrivalDate || '-'}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
   });
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
