@@ -51,6 +51,12 @@
     </div>
   </div>
 
+  <!-- Barra de Aviso de Selección Múltiple -->
+  <div id="selection-banner" class="selection-banner" style="display: none;">
+    <span id="selection-count-text">Calculando métricas de 0 seleccionados</span>
+    <button type="button" class="btn-clear-selection" onclick="clearSelection()">Limpiar Selección</button>
+  </div>
+
   <!-- Tarjetas de Métricas -->
   <div class="summary-grid">
     <div class="card-summary">
@@ -127,19 +133,19 @@
     </form>
   </div>
 
-  <!-- Tabla de Inventario -->
+  <!-- Tabla de Inventario Ordenable -->
   <div class="table-container">
     <table>
       <thead>
         <tr>
-          <th>Producto</th>
-          <th>Plataforma</th>
-          <th>Costo</th>
-          <th>Venta Obj. / Real</th>
-          <th>Ganancia / ROI</th>
-          <th>Fecha Compra</th>
-          <th>Tiempo Stock</th>
-          <th>Plazo Devolución</th>
+          <th class="sortable-th" onclick="handleSort('name')">Producto <span class="sort-icon" id="sort-name">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('platform')">Plataforma <span class="sort-icon" id="sort-platform">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('cost')">Costo <span class="sort-icon" id="sort-cost">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('targetPrice')">Venta Obj. / Real <span class="sort-icon" id="sort-targetPrice">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('profit')">Ganancia / ROI <span class="sort-icon" id="sort-profit">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('buyDate')">Fecha Compra <span class="sort-icon" id="sort-buyDate">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('daysInStock')">Tiempo Stock <span class="sort-icon" id="sort-daysInStock">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('daysRemaining')">Plazo Devolución <span class="sort-icon" id="sort-daysRemaining">↕</span></th>
           <th>Link</th>
           <th>Estado</th>
           <th>Acciones</th>

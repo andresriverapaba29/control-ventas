@@ -15,12 +15,19 @@ let pendingSaleDocId = null;
 let pendingDeleteDocId = null;
 let pendingEditDocId = null;
 
+// Estados de Selección Múltiple y Ordenamiento
+let selectedProductIds = new Set();
+let currentSortColumn = null;
+let currentSortDirection = 'asc'; // 'asc' o 'desc'
+
 const form = document.getElementById('product-form');
 const inventoryList = document.getElementById('inventory-list');
 const monthFilterSelect = document.getElementById('month-filter');
 const statusFilterSelect = document.getElementById('status-filter');
 const searchInput = document.getElementById('search-input');
 const buyDateInput = document.getElementById('buyDate');
+const selectionBanner = document.getElementById('selection-banner');
+const selectionCountText = document.getElementById('selection-count-text');
 
 buyDateInput.value = new Date().toISOString().split('T')[0];
 
@@ -85,6 +92,7 @@ function resetFilters() {
   monthFilterSelect.value = 'ALL';
   statusFilterSelect.value = 'ALL';
   searchInput.value = '';
+  clearSelection();
   render();
 }
 
@@ -110,12 +118,132 @@ function updateMonthOptions() {
   });
 }
 
+// Lógica de Selección Múltiple
+function toggleProductSelection(docId, event) {
+  // Evitar seleccionar si se hizo clic en select, link o botón
+  if (event.target.closest('button') || event.target.closest('select') || event.target.closest('a')) {
+    return;
+  }
+
+  if (selectedProductIds.has(docId)) {
+    selectedProductIds.delete(docId);
+  } else {
+    selectedProductIds.add(docId);
+  }
+
+  render();
+}
+
+function clearSelection() {
+  selectedProductIds.clear();
+  render();
+}
+
+// Lógica de Ordenamiento por Encabezados
+function handleSort(columnKey) {
+  if (currentSortColumn === columnKey) {
+    currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSortColumn = columnKey;
+    currentSortDirection = 'asc';
+  }
+  updateSortIcons();
+  render();
+}
+
+function updateSortIcons() {
+  const headers = ['name', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining'];
+  headers.forEach(h => {
+    const icon = document.getElementById(`sort-${h}`);
+    if (!icon) return;
+    if (h === currentSortColumn) {
+      icon.innerText = currentSortDirection === 'asc' ? '▲' : '▼';
+      icon.style.color = '#2563eb';
+    } else {
+      icon.innerText = '↕';
+      icon.style.color = '#9ca3af';
+    }
+  });
+}
+
 function render() {
   inventoryList.innerHTML = '';
   
   const filterMonth = monthFilterSelect.value;
   const filterStatus = statusFilterSelect.value;
   const query = searchInput.value.toLowerCase().trim();
+
+  // Filtrar productos
+  let filteredProducts = products.filter(prod => {
+    if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return false;
+    if (filterStatus !== 'ALL' && prod.status !== filterStatus) return false;
+    if (query && !prod.name.toLowerCase().includes(query) && !prod.platform.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  // Ordenar productos según la columna seleccionada o por defecto
+  if (currentSortColumn) {
+    filteredProducts.sort((a, b) => {
+      let valA, valB;
+
+      if (currentSortColumn === 'cost' || currentSortColumn === 'targetPrice') {
+        valA = parseFloat(a[currentSortColumn]) || 0;
+        valB = parseFloat(b[currentSortColumn]) || 0;
+      } else if (currentSortColumn === 'profit') {
+        const costA = parseFloat(a.cost) || 0;
+        const targetA = parseFloat(a.targetPrice) || 0;
+        const actualA = a.actualPrice ? parseFloat(a.actualPrice) : targetA;
+        valA = a.status === 'Vendido' ? (actualA - costA) : (a.status === 'Devuelto' ? 0 : targetA - costA);
+
+        const costB = parseFloat(b.cost) || 0;
+        const targetB = parseFloat(b.targetPrice) || 0;
+        const actualB = b.actualPrice ? parseFloat(b.actualPrice) : targetB;
+        valB = b.status === 'Vendido' ? (actualB - costB) : (b.status === 'Devuelto' ? 0 : targetB - costB);
+      } else if (currentSortColumn === 'daysInStock') {
+        const startA = a.arrivalDate || a.buyDate;
+        valA = calculateDays(startA, a.sellDate);
+        const startB = b.arrivalDate || b.buyDate;
+        valB = calculateDays(startB, b.sellDate);
+      } else if (currentSortColumn === 'daysRemaining') {
+        valA = getReturnRemainingDays(a.arrivalDate);
+        valB = getReturnRemainingDays(b.arrivalDate);
+      } else {
+        valA = (a[currentSortColumn] || '').toString().toLowerCase();
+        valB = (b[currentSortColumn] || '').toString().toLowerCase();
+      }
+
+      if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  } else {
+    // Orden predeterminado: Disponibles con menos días primero, luego vendidos
+    filteredProducts.sort((a, b) => {
+      if (a.status !== b.status) {
+        if (a.status === 'Disponible') return -1;
+        if (b.status === 'Disponible') return 1;
+        if (a.status === 'Vendido') return -1;
+        return 1;
+      }
+      if (a.status === 'Disponible') {
+        return getReturnRemainingDays(a.arrivalDate) - getReturnRemainingDays(b.arrivalDate);
+      }
+      return 0;
+    });
+  }
+
+  // Manejo de Métricas: ¿Global o Solo Seleccionados?
+  const hasSelection = selectedProductIds.size > 0;
+  const metricsSource = hasSelection 
+    ? filteredProducts.filter(p => selectedProductIds.has(p.id)) 
+    : filteredProducts;
+
+  if (hasSelection) {
+    selectionBanner.style.display = 'flex';
+    selectionCountText.innerText = `🔍 Mostrando métricas de ${selectedProductIds.size} producto${selectedProductIds.size !== 1 ? 's' : ''} seleccionado${selectedProductIds.size !== 1 ? 's' : ''}`;
+  } else {
+    selectionBanner.style.display = 'none';
+  }
 
   let totalInvested = 0;
   let capitalRecovered = 0;
@@ -124,32 +252,32 @@ function render() {
   let projectedProfit = 0;
   let unitsInStock = 0;
   let unitsSold = 0;
-  let visibleCount = 0;
 
-  const sortedProducts = [...products].sort((a, b) => {
-    if (a.status !== b.status) {
-      if (a.status === 'Disponible') return -1;
-      if (b.status === 'Disponible') return 1;
-      if (a.status === 'Vendido') return -1;
-      return 1;
-    }
-    if (a.status === 'Disponible') {
-      return getReturnRemainingDays(a.arrivalDate) - getReturnRemainingDays(b.arrivalDate);
-    }
-    return 0;
-  });
-
-  sortedProducts.forEach((prod) => {
-    if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return;
-    if (filterStatus !== 'ALL' && prod.status !== filterStatus) return;
-    if (query && !prod.name.toLowerCase().includes(query) && !prod.platform.toLowerCase().includes(query)) return;
-
-    visibleCount++;
+  metricsSource.forEach(prod => {
     const cost = parseFloat(prod.cost) || 0;
     const targetPrice = parseFloat(prod.targetPrice) || 0;
     const actualPrice = prod.actualPrice ? parseFloat(prod.actualPrice) : targetPrice;
 
     totalInvested += cost;
+
+    if (prod.status === 'Vendido') {
+      capitalRecovered += actualPrice;
+      realizedProfit += (actualPrice - cost);
+      unitsSold++;
+    } else if (prod.status === 'Devuelto') {
+      capitalRecovered += cost;
+    } else {
+      capitalAtRisk += cost;
+      projectedProfit += (targetPrice - cost);
+      unitsInStock++;
+    }
+  });
+
+  // Renderizar filas de la tabla
+  filteredProducts.forEach((prod) => {
+    const cost = parseFloat(prod.cost) || 0;
+    const targetPrice = parseFloat(prod.targetPrice) || 0;
+    const actualPrice = prod.actualPrice ? parseFloat(prod.actualPrice) : targetPrice;
 
     let profit = 0;
     let profitClass = '';
@@ -157,26 +285,19 @@ function render() {
     let roiHtml = '';
 
     if (prod.status === 'Vendido') {
-      capitalRecovered += actualPrice;
       const netGain = (actualPrice - cost);
-      realizedProfit += netGain;
-      unitsSold++;
       profit = netGain;
       const roi = cost > 0 ? ((netGain / cost) * 100).toFixed(1) : 0;
       profitClass = profit >= 0 ? 'text-green' : 'text-red';
       profitLabel = `${profit >= 0 ? '+' : ''}${formatCurrency(profit)} Real`;
       roiHtml = `<span class="roi-badge ${profitClass}">${roi >= 0 ? '+' : ''}${roi}% ROI</span>`;
     } else if (prod.status === 'Devuelto') {
-      capitalRecovered += cost; // Reembolso 100% de la inversión
       profit = 0;
       profitClass = 'text-gray';
       profitLabel = `$0 (Devuelto)`;
       roiHtml = `<span class="roi-badge text-gray">0.0% ROI</span>`;
     } else {
-      capitalAtRisk += cost;
       const projGain = (targetPrice - cost);
-      projectedProfit += projGain;
-      unitsInStock++;
       profit = projGain;
       const roi = cost > 0 ? ((projGain / cost) * 100).toFixed(1) : 0;
       profitClass = profit >= 0 ? 'text-est' : 'text-red';
@@ -205,8 +326,16 @@ function render() {
       : `<span class="link-btn disabled">Sin link</span>`;
 
     const row = document.createElement('tr');
-    if (prod.status === 'Vendido') row.className = 'row-sold';
-    if (prod.status === 'Devuelto') row.className = 'row-returned';
+    
+    // Asignar clases de fila
+    let rowClasses = [];
+    if (prod.status === 'Vendido') rowClasses.push('row-sold');
+    if (prod.status === 'Devuelto') rowClasses.push('row-returned');
+    if (selectedProductIds.has(prod.id)) rowClasses.push('row-selected');
+    if (rowClasses.length > 0) row.className = rowClasses.join(' ');
+
+    // Evento de clic en la fila para seleccionar
+    row.onclick = (e) => toggleProductSelection(prod.id, e);
 
     row.innerHTML = `
       <td><strong>${escapeHtml(prod.name)}</strong></td>
@@ -239,10 +368,11 @@ function render() {
     inventoryList.appendChild(row);
   });
 
-  if (visibleCount === 0) {
+  if (filteredProducts.length === 0) {
     inventoryList.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
   }
 
+  // Actualización de Métricas Superiores
   const subElem = document.getElementById('realized-profit-sub');
   subElem.innerText = `${realizedProfit >= 0 ? '+' : ''} ${formatCurrency(realizedProfit)} de Ganancia Real`;
   subElem.className = `sub-text ${realizedProfit >= 0 ? 'text-green' : 'text-red'}`;
@@ -396,6 +526,7 @@ function closeDeleteModal() {
 function confirmDelete() {
   if (pendingDeleteDocId) {
     db.collection("productos").doc(pendingDeleteDocId).delete().then(() => {
+      selectedProductIds.delete(pendingDeleteDocId);
       closeDeleteModal();
     });
   }

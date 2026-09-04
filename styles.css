@@ -42,7 +42,7 @@ h1 {
   padding: 15px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .filter-grid {
@@ -81,6 +81,36 @@ h1 {
 
 .btn-excel { background-color: #107c41; color: white; }
 .btn-excel:hover { background-color: #0b5c30; }
+
+/* Barra de Selección Múltiple */
+.selection-banner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.btn-clear-selection {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.btn-clear-selection:hover {
+  background-color: #1d4ed8;
+}
 
 /* Tarjetas Resumen */
 .summary-grid {
@@ -216,6 +246,42 @@ th {
   background: #f9fafb;
   font-weight: 600;
   color: #4b5563;
+  user-select: none;
+}
+
+/* Encabezados Ordenables */
+.sortable-th {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.sortable-th:hover {
+  background-color: #f1f5f9;
+  color: var(--primary);
+}
+
+.sort-icon {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+.sortable-th:hover .sort-icon {
+  color: var(--primary);
+}
+
+/* Filas Interactivas y Selección */
+tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+tr.row-selected {
+  background-color: #e0f2fe !important; /* Azul claro resaltado */
 }
 
 tr.row-sold {
