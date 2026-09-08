@@ -34,14 +34,14 @@
         </select>
       </div>
 
-      <div class="filter-group">
-        <label for="status-filter">Estado:</label>
-        <select id="status-filter" onchange="render()">
-          <option value="ALL">Todos los Estados</option>
-          <option value="Disponible">En Stock</option>
-          <option value="Vendido">Vendidos</option>
-          <option value="Devuelto">Devueltos</option>
-        </select>
+      <div class="filter-group-chips">
+        <label>Filtrar por Estado:</label>
+        <div class="status-chips">
+          <button type="button" class="chip active" id="chip-ALL" onclick="setStatusFilter('ALL')">Todos <span id="count-chip-all">(0)</span></button>
+          <button type="button" class="chip" id="chip-Disponible" onclick="setStatusFilter('Disponible')">🟢 En Stock <span id="count-chip-disp">(0)</span></button>
+          <button type="button" class="chip" id="chip-Vendido" onclick="setStatusFilter('Vendido')">🔵 Vendidos <span id="count-chip-sold">(0)</span></button>
+          <button type="button" class="chip" id="chip-Devuelto" onclick="setStatusFilter('Devuelto')">⚪ Devueltos <span id="count-chip-ret">(0)</span></button>
+        </div>
       </div>
 
       <div class="filter-actions">
@@ -51,10 +51,16 @@
     </div>
   </div>
 
-  <!-- Barra de Aviso de Selección Múltiple -->
+  <!-- Barra de Acciones en Lote y Selección Múltiple -->
   <div id="selection-banner" class="selection-banner" style="display: none;">
-    <span id="selection-count-text">Calculando métricas de 0 seleccionados</span>
-    <button type="button" class="btn-clear-selection" onclick="clearSelection()">Limpiar Selección</button>
+    <div class="selection-info">
+      <span id="selection-count-text">Calculando métricas de 0 seleccionados</span>
+    </div>
+    <div class="selection-actions">
+      <button type="button" class="btn-bulk-sell" onclick="bulkMarkAsSold()">🎉 Marcar Vendidos</button>
+      <button type="button" class="btn-bulk-delete" onclick="openBulkDeleteModal()">🗑️ Eliminar Lote</button>
+      <button type="button" class="btn-clear-selection" onclick="clearSelection()">✖ Limpiar</button>
+    </div>
   </div>
 
   <!-- Tarjetas de Métricas -->
@@ -147,7 +153,7 @@
           <th class="sortable-th" onclick="handleSort('daysInStock')">Tiempo Stock <span class="sort-icon" id="sort-daysInStock">↕</span></th>
           <th class="sortable-th" onclick="handleSort('daysRemaining')">Plazo Devolución <span class="sort-icon" id="sort-daysRemaining">↕</span></th>
           <th>Link</th>
-          <th>Estado</th>
+          <th class="sortable-th" onclick="handleSort('status')">Estado <span class="sort-icon" id="sort-status">↕</span></th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -201,7 +207,7 @@
   </div>
 </div>
 
-<!-- Modal Centrado para Registrar Venta -->
+<!-- Modal Centrado para Registrar Venta Individual -->
 <div id="saleModal" class="modal-overlay">
   <div class="modal-content">
     <h3>🎉 Confirmar Venta</h3>
@@ -214,7 +220,7 @@
   </div>
 </div>
 
-<!-- Modal Centrado para Eliminar Producto -->
+<!-- Modal Centrado para Eliminar Producto Individual -->
 <div id="deleteModal" class="modal-overlay">
   <div class="modal-content">
     <h3>⚠️ Eliminar Producto</h3>
@@ -222,6 +228,18 @@
     <div class="modal-buttons">
       <button class="btn-cancel" onclick="closeDeleteModal()">Cancelar</button>
       <button class="btn-delete" style="width: auto; padding: 10px 16px;" onclick="confirmDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Centrado para Eliminar Lote -->
+<div id="bulkDeleteModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>⚠️ Eliminar Lote</h3>
+    <p id="bulkDeleteMessage">¿Estás seguro de que deseas eliminar los productos seleccionados?</p>
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="closeBulkDeleteModal()">Cancelar</button>
+      <button class="btn-delete" style="width: auto; padding: 10px 16px;" onclick="confirmBulkDelete()">Eliminar Todo el Lote</button>
     </div>
   </div>
 </div>

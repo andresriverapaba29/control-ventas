@@ -15,15 +15,15 @@ let pendingSaleDocId = null;
 let pendingDeleteDocId = null;
 let pendingEditDocId = null;
 
-// Estados de Selección Múltiple y Ordenamiento
+// Estados de Filtro, Selección y Ordenamiento
+let currentStatusFilter = 'ALL';
 let selectedProductIds = new Set();
 let currentSortColumn = null;
-let currentSortDirection = 'asc'; // 'asc' o 'desc'
+let currentSortDirection = 'asc';
 
 const form = document.getElementById('product-form');
 const inventoryList = document.getElementById('inventory-list');
 const monthFilterSelect = document.getElementById('month-filter');
-const statusFilterSelect = document.getElementById('status-filter');
 const searchInput = document.getElementById('search-input');
 const buyDateInput = document.getElementById('buyDate');
 const selectionBanner = document.getElementById('selection-banner');
@@ -37,6 +37,7 @@ db.collection("productos").onSnapshot((snapshot) => {
     ...doc.data()
   }));
   updateMonthOptions();
+  updateChipCounters();
   render();
 });
 
@@ -88,12 +89,32 @@ function toggleSoldPriceInput(status) {
   document.getElementById('soldPriceGroup').style.display = status === 'Vendido' ? 'block' : 'none';
 }
 
+// Filtro de Chips
+function setStatusFilter(status) {
+  currentStatusFilter = status;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  const activeBtn = document.getElementById(`chip-${status}`);
+  if (activeBtn) activeBtn.classList.add('active');
+  render();
+}
+
+function updateChipCounters() {
+  const total = products.length;
+  const disp = products.filter(p => p.status === 'Disponible').length;
+  const sold = products.filter(p => p.status === 'Vendido').length;
+  const ret = products.filter(p => p.status === 'Devuelto').length;
+
+  document.getElementById('count-chip-all').innerText = `(${total})`;
+  document.getElementById('count-chip-disp').innerText = `(${disp})`;
+  document.getElementById('count-chip-sold').innerText = `(${sold})`;
+  document.getElementById('count-chip-ret').innerText = `(${ret})`;
+}
+
 function resetFilters() {
   monthFilterSelect.value = 'ALL';
-  statusFilterSelect.value = 'ALL';
   searchInput.value = '';
+  setStatusFilter('ALL');
   clearSelection();
-  render();
 }
 
 function updateMonthOptions() {
@@ -120,7 +141,6 @@ function updateMonthOptions() {
 
 // Lógica de Selección Múltiple
 function toggleProductSelection(docId, event) {
-  // Evitar seleccionar si se hizo clic en select, link o botón
   if (event.target.closest('button') || event.target.closest('select') || event.target.closest('a')) {
     return;
   }
@@ -139,7 +159,54 @@ function clearSelection() {
   render();
 }
 
-// Lógica de Ordenamiento por Encabezados
+// Acciones en Lote (Bulk Actions)
+function bulkMarkAsSold() {
+  if (selectedProductIds.size === 0) return;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const batch = db.batch();
+
+  selectedProductIds.forEach(id => {
+    const prod = products.find(p => p.id === id);
+    if (prod && prod.status !== 'Vendido') {
+      const docRef = db.collection("productos").doc(id);
+      batch.update(docRef, {
+        status: 'Vendido',
+        actualPrice: prod.actualPrice || prod.targetPrice,
+        sellDate: today
+      });
+    }
+  });
+
+  batch.commit().then(() => {
+    clearSelection();
+  });
+}
+
+function openBulkDeleteModal() {
+  if (selectedProductIds.size === 0) return;
+  document.getElementById('bulkDeleteMessage').innerText = `¿Estás seguro de que deseas eliminar los ${selectedProductIds.size} productos seleccionados? Esta acción no se puede deshacer.`;
+  document.getElementById('bulkDeleteModal').style.display = 'flex';
+}
+
+function closeBulkDeleteModal() {
+  document.getElementById('bulkDeleteModal').style.display = 'none';
+}
+
+function confirmBulkDelete() {
+  const batch = db.batch();
+  selectedProductIds.forEach(id => {
+    const docRef = db.collection("productos").doc(id);
+    batch.delete(docRef);
+  });
+
+  batch.commit().then(() => {
+    clearSelection();
+    closeBulkDeleteModal();
+  });
+}
+
+// Lógica de Ordenamiento por Encabezados (Incluyendo Estado)
 function handleSort(columnKey) {
   if (currentSortColumn === columnKey) {
     currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -152,7 +219,7 @@ function handleSort(columnKey) {
 }
 
 function updateSortIcons() {
-  const headers = ['name', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining'];
+  const headers = ['name', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining', 'status'];
   headers.forEach(h => {
     const icon = document.getElementById(`sort-${h}`);
     if (!icon) return;
@@ -170,18 +237,16 @@ function render() {
   inventoryList.innerHTML = '';
   
   const filterMonth = monthFilterSelect.value;
-  const filterStatus = statusFilterSelect.value;
   const query = searchInput.value.toLowerCase().trim();
 
-  // Filtrar productos
   let filteredProducts = products.filter(prod => {
     if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return false;
-    if (filterStatus !== 'ALL' && prod.status !== filterStatus) return false;
+    if (currentStatusFilter !== 'ALL' && prod.status !== currentStatusFilter) return false;
     if (query && !prod.name.toLowerCase().includes(query) && !prod.platform.toLowerCase().includes(query)) return false;
     return true;
   });
 
-  // Ordenar productos según la columna seleccionada o por defecto
+  // Ordenamiento de tabla
   if (currentSortColumn) {
     filteredProducts.sort((a, b) => {
       let valA, valB;
@@ -207,6 +272,10 @@ function render() {
       } else if (currentSortColumn === 'daysRemaining') {
         valA = getReturnRemainingDays(a.arrivalDate);
         valB = getReturnRemainingDays(b.arrivalDate);
+      } else if (currentSortColumn === 'status') {
+        // Orden alfabético por estado
+        valA = (a.status || '').toLowerCase();
+        valB = (b.status || '').toLowerCase();
       } else {
         valA = (a[currentSortColumn] || '').toString().toLowerCase();
         valB = (b[currentSortColumn] || '').toString().toLowerCase();
@@ -217,7 +286,7 @@ function render() {
       return 0;
     });
   } else {
-    // Orden predeterminado: Disponibles con menos días primero, luego vendidos
+    // Orden predeterminado: Disponibles con menos días primero, luego vendidos y devueltos
     filteredProducts.sort((a, b) => {
       if (a.status !== b.status) {
         if (a.status === 'Disponible') return -1;
@@ -232,7 +301,7 @@ function render() {
     });
   }
 
-  // Manejo de Métricas: ¿Global o Solo Seleccionados?
+  // Manejo de Métricas: ¿Global o Selección?
   const hasSelection = selectedProductIds.size > 0;
   const metricsSource = hasSelection 
     ? filteredProducts.filter(p => selectedProductIds.has(p.id)) 
@@ -327,14 +396,12 @@ function render() {
 
     const row = document.createElement('tr');
     
-    // Asignar clases de fila
     let rowClasses = [];
     if (prod.status === 'Vendido') rowClasses.push('row-sold');
     if (prod.status === 'Devuelto') rowClasses.push('row-returned');
     if (selectedProductIds.has(prod.id)) rowClasses.push('row-selected');
     if (rowClasses.length > 0) row.className = rowClasses.join(' ');
 
-    // Evento de clic en la fila para seleccionar
     row.onclick = (e) => toggleProductSelection(prod.id, e);
 
     row.innerHTML = `
@@ -372,7 +439,6 @@ function render() {
     inventoryList.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
   }
 
-  // Actualización de Métricas Superiores
   const subElem = document.getElementById('realized-profit-sub');
   subElem.innerText = `${realizedProfit >= 0 ? '+' : ''} ${formatCurrency(realizedProfit)} de Ganancia Real`;
   subElem.className = `sub-text ${realizedProfit >= 0 ? 'text-green' : 'text-red'}`;

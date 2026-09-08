@@ -47,17 +47,50 @@ h1 {
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   align-items: end;
 }
 
-.filter-group label {
+.filter-group label, .filter-group-chips label {
   font-size: 0.85rem;
   font-weight: 600;
   color: #374151;
   display: block;
   margin-bottom: 5px;
+}
+
+/* Píldoras / Chips de Estado */
+.filter-group-chips {
+  grid-column: span 2;
+}
+
+.status-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+  color: #4b5563;
+  padding: 7px 12px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  background: #e5e7eb;
+}
+
+.chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
 }
 
 .filter-actions {
@@ -82,7 +115,7 @@ h1 {
 .btn-excel { background-color: #107c41; color: white; }
 .btn-excel:hover { background-color: #0b5c30; }
 
-/* Barra de Selección Múltiple */
+/* Barra de Selección Múltiple y Acciones en Lote */
 .selection-banner {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
@@ -93,24 +126,56 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.selection-info {
   font-weight: 600;
   font-size: 0.88rem;
 }
 
-.btn-clear-selection {
-  background: #2563eb;
+.selection-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-bulk-sell {
+  background: #16a34a;
   color: white;
   border: none;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 600;
 }
+.btn-bulk-sell:hover { background-color: #15803d; }
 
-.btn-clear-selection:hover {
-  background-color: #1d4ed8;
+.btn-bulk-delete {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
+.btn-bulk-delete:hover { background-color: var(--danger-hover); }
+
+.btn-clear-selection {
+  background: #64748b;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.btn-clear-selection:hover { background-color: #475569; }
 
 /* Tarjetas Resumen */
 .summary-grid {
@@ -281,7 +346,7 @@ tbody tr:hover {
 }
 
 tr.row-selected {
-  background-color: #e0f2fe !important; /* Azul claro resaltado */
+  background-color: #e0f2fe !important;
 }
 
 tr.row-sold {
@@ -441,4 +506,7 @@ tr.row-returned {
   .summary-grid { grid-template-columns: 1fr 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .table-container { overflow-x: auto; }
+  .filter-group-chips { grid-column: span 1; }
+  .selection-banner { flex-direction: column; align-items: stretch; text-align: center; }
+  .selection-actions { justify-content: center; flex-wrap: wrap; }
 }
