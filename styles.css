@@ -219,6 +219,35 @@ h1 {
 .text-warning { color: var(--warning); }
 .text-gray { color: #6b7280; font-weight: 600; }
 
+/* Badges de Métodos de Pago */
+.pay-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pay-nu {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #d8b4fe;
+}
+.pay-rappi {
+  background-color: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+.pay-cash {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+.pay-other {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
 /* Formulario Plegable */
 .form-card {
   background: var(--card);

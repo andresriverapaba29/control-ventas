@@ -24,7 +24,7 @@
     <div class="filter-grid">
       <div class="filter-group">
         <label for="search-input">Buscar Producto / Plataforma:</label>
-        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Amazon..." oninput="render()">
+        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Nu, Amazon..." oninput="render()">
       </div>
 
       <div class="filter-group">
@@ -103,6 +103,15 @@
           <input type="text" id="name" placeholder="Ej: Hidrolavadora" required>
         </div>
         <div>
+          <label for="paymentMethod">Método de Pago</label>
+          <select id="paymentMethod" required>
+            <option value="Nu">Tarjeta Nu 💜</option>
+            <option value="Rappi">Tarjeta Rappi 🧡</option>
+            <option value="Efectivo">Efectivo / Débito 💵</option>
+            <option value="Otra">Otra Tarjeta 💳</option>
+          </select>
+        </div>
+        <div>
           <label for="platform">Plataforma</label>
           <input type="text" id="platform" placeholder="Amazon, MercadoLibre..." required>
         </div>
@@ -145,6 +154,7 @@
       <thead>
         <tr>
           <th class="sortable-th" onclick="handleSort('name')">Producto <span class="sort-icon" id="sort-name">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('paymentMethod')">Pago <span class="sort-icon" id="sort-paymentMethod">↕</span></th>
           <th class="sortable-th" onclick="handleSort('platform')">Plataforma <span class="sort-icon" id="sort-platform">↕</span></th>
           <th class="sortable-th" onclick="handleSort('cost')">Costo <span class="sort-icon" id="sort-cost">↕</span></th>
           <th class="sortable-th" onclick="handleSort('targetPrice')">Venta Obj. / Real <span class="sort-icon" id="sort-targetPrice">↕</span></th>
@@ -173,6 +183,15 @@
         <div>
           <label for="edit-name">Producto</label>
           <input type="text" id="edit-name" required>
+        </div>
+        <div>
+          <label for="edit-paymentMethod">Método de Pago</label>
+          <select id="edit-paymentMethod" required>
+            <option value="Nu">Tarjeta Nu 💜</option>
+            <option value="Rappi">Tarjeta Rappi 🧡</option>
+            <option value="Efectivo">Efectivo / Débito 💵</option>
+            <option value="Otra">Otra Tarjeta 💳</option>
+          </select>
         </div>
         <div>
           <label for="edit-platform">Plataforma</label>

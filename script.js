@@ -79,6 +79,20 @@ function calculateReturnStatus(arrivalDateStr, status) {
   return `<span class="return-badge safe">🟢 ${daysRemaining} d. restantes</span>`;
 }
 
+function formatPaymentBadge(method) {
+  if (!method) return '<span style="color:#9ca3af;">-</span>';
+  switch (method) {
+    case 'Nu':
+      return '<span class="pay-badge pay-nu">Nu 💜</span>';
+    case 'Rappi':
+      return '<span class="pay-badge pay-rappi">Rappi 🧡</span>';
+    case 'Efectivo':
+      return '<span class="pay-badge pay-cash">Efectivo 💵</span>';
+    default:
+      return `<span class="pay-badge pay-other">${escapeHtml(method)} 💳</span>`;
+  }
+}
+
 function toggleForm() {
   const isHidden = form.style.display === 'none';
   form.style.display = isHidden ? 'block' : 'none';
@@ -206,7 +220,7 @@ function confirmBulkDelete() {
   });
 }
 
-// Lógica de Ordenamiento por Encabezados (Incluyendo Estado)
+// Lógica de Ordenamiento por Encabezados
 function handleSort(columnKey) {
   if (currentSortColumn === columnKey) {
     currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -219,7 +233,7 @@ function handleSort(columnKey) {
 }
 
 function updateSortIcons() {
-  const headers = ['name', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining', 'status'];
+  const headers = ['name', 'paymentMethod', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining', 'status'];
   headers.forEach(h => {
     const icon = document.getElementById(`sort-${h}`);
     if (!icon) return;
@@ -242,7 +256,12 @@ function render() {
   let filteredProducts = products.filter(prod => {
     if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return false;
     if (currentStatusFilter !== 'ALL' && prod.status !== currentStatusFilter) return false;
-    if (query && !prod.name.toLowerCase().includes(query) && !prod.platform.toLowerCase().includes(query)) return false;
+    if (query) {
+      const matchName = prod.name && prod.name.toLowerCase().includes(query);
+      const matchPlatform = prod.platform && prod.platform.toLowerCase().includes(query);
+      const matchPay = prod.paymentMethod && prod.paymentMethod.toLowerCase().includes(query);
+      if (!matchName && !matchPlatform && !matchPay) return false;
+    }
     return true;
   });
 
@@ -273,9 +292,11 @@ function render() {
         valA = getReturnRemainingDays(a.arrivalDate);
         valB = getReturnRemainingDays(b.arrivalDate);
       } else if (currentSortColumn === 'status') {
-        // Orden alfabético por estado
         valA = (a.status || '').toLowerCase();
         valB = (b.status || '').toLowerCase();
+      } else if (currentSortColumn === 'paymentMethod') {
+        valA = (a.paymentMethod || '').toLowerCase();
+        valB = (b.paymentMethod || '').toLowerCase();
       } else {
         valA = (a[currentSortColumn] || '').toString().toLowerCase();
         valB = (b[currentSortColumn] || '').toString().toLowerCase();
@@ -286,7 +307,6 @@ function render() {
       return 0;
     });
   } else {
-    // Orden predeterminado: Disponibles con menos días primero, luego vendidos y devueltos
     filteredProducts.sort((a, b) => {
       if (a.status !== b.status) {
         if (a.status === 'Disponible') return -1;
@@ -389,6 +409,7 @@ function render() {
     }
 
     const returnBadge = calculateReturnStatus(prod.arrivalDate, prod.status);
+    const paymentBadge = formatPaymentBadge(prod.paymentMethod);
 
     const linkHtml = prod.productUrl 
       ? `<a href="${escapeHtml(prod.productUrl)}" target="_blank" class="link-btn">🔗 Ver</a>` 
@@ -406,6 +427,7 @@ function render() {
 
     row.innerHTML = `
       <td><strong>${escapeHtml(prod.name)}</strong></td>
+      <td>${paymentBadge}</td>
       <td>${escapeHtml(prod.platform)}</td>
       <td>${formatCurrency(cost)}</td>
       <td>${formatCurrency(prod.status === 'Vendido' ? actualPrice : targetPrice)}</td>
@@ -436,7 +458,7 @@ function render() {
   });
 
   if (filteredProducts.length === 0) {
-    inventoryList.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
+    inventoryList.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
   }
 
   const subElem = document.getElementById('realized-profit-sub');
@@ -461,6 +483,7 @@ form.addEventListener('submit', (e) => {
 
   const newProduct = {
     name: document.getElementById('name').value,
+    paymentMethod: document.getElementById('paymentMethod').value,
     platform: document.getElementById('platform').value,
     cost: document.getElementById('cost').value,
     targetPrice: document.getElementById('targetPrice').value,
@@ -474,6 +497,7 @@ form.addEventListener('submit', (e) => {
 
   db.collection("productos").add(newProduct).then(() => {
     form.reset();
+    document.getElementById('paymentMethod').value = 'Nu';
     toggleSoldPriceInput('Disponible');
     buyDateInput.value = new Date().toISOString().split('T')[0];
     toggleForm();
@@ -486,6 +510,7 @@ function duplicateProduct(docId) {
 
   const duplicated = {
     name: original.name,
+    paymentMethod: original.paymentMethod || 'Nu',
     platform: original.platform,
     cost: original.cost,
     targetPrice: original.targetPrice,
@@ -506,6 +531,7 @@ function openEditModal(docId) {
 
   pendingEditDocId = docId;
   document.getElementById('edit-name').value = product.name || '';
+  document.getElementById('edit-paymentMethod').value = product.paymentMethod || 'Nu';
   document.getElementById('edit-platform').value = product.platform || '';
   document.getElementById('edit-cost').value = product.cost || '';
   document.getElementById('edit-targetPrice').value = product.targetPrice || '';
@@ -527,6 +553,7 @@ function confirmEdit(e) {
 
   const updatedProduct = {
     name: document.getElementById('edit-name').value,
+    paymentMethod: document.getElementById('edit-paymentMethod').value,
     platform: document.getElementById('edit-platform').value,
     cost: document.getElementById('edit-cost').value,
     targetPrice: document.getElementById('edit-targetPrice').value,
@@ -601,7 +628,7 @@ function confirmDelete() {
 function exportToExcel() {
   if (products.length === 0) return alert("No hay productos para exportar.");
 
-  let csvContent = "\uFEFFProducto;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;ROI (%);Fecha Compra;Fecha Llegada;Fecha Venta;Dias en Stock;Estado;Link\n";
+  let csvContent = "\uFEFFProducto;Metodo Pago;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;ROI (%);Fecha Compra;Fecha Llegada;Fecha Venta;Dias en Stock;Estado;Link\n";
 
   products.forEach(p => {
     const cost = parseFloat(p.cost) || 0;
@@ -611,7 +638,7 @@ function exportToExcel() {
     const roi = cost > 0 ? ((profit / cost) * 100).toFixed(1) : '0';
     const days = calculateDays(p.buyDate, p.sellDate);
 
-    csvContent += `"${p.name}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};${roi}%;"${p.buyDate}";"${p.arrivalDate || '-'}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
+    csvContent += `"${p.name}";"${p.paymentMethod || '-'}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};${roi}%;"${p.buyDate}";"${p.arrivalDate || '-'}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
   });
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
