@@ -24,8 +24,10 @@ body {
   padding: 15px;
 }
 
+/* Contenedor ampliado para abarcar pantallas anchas sin cortar botones */
 .container {
-  max-width: 1400px;
+  max-width: 1650px;
+  width: 96%;
   margin: 0 auto;
 }
 
@@ -331,7 +333,7 @@ table {
 }
 
 th, td {
-  padding: 10px 12px;
+  padding: 10px 8px; /* Ajuste para distribuir el espacio horizontal limpiamente */
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
@@ -446,13 +448,15 @@ tr.row-returned {
   font-size: 0.82rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  min-width: 115px;
+  min-width: 110px;
   cursor: pointer;
 }
 
+/* Contenedor y Botones de Acciones garantizados sin cortes */
 .action-buttons {
   display: flex;
   gap: 5px;
+  min-width: 180px;
 }
 
 .btn-duplicate {
@@ -464,6 +468,7 @@ tr.row-returned {
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .btn-duplicate:hover { background-color: #4f46e5; }
@@ -477,6 +482,7 @@ tr.row-returned {
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .btn-edit:hover { background-color: #d97706; }
@@ -490,6 +496,7 @@ tr.row-returned {
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .btn-delete:hover { background-color: var(--danger-hover); }
