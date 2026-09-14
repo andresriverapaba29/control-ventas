@@ -15,7 +15,6 @@ let pendingSaleDocId = null;
 let pendingDeleteDocId = null;
 let pendingEditDocId = null;
 
-// Estados de Filtro, Selección y Ordenamiento
 let currentStatusFilter = 'ALL';
 let selectedProductIds = new Set();
 let currentSortColumn = null;
@@ -93,6 +92,47 @@ function formatPaymentBadge(method) {
   }
 }
 
+// Renderizar columna "Tarjeta Pagada" con toggle interactivo
+function formatCardPaidBadge(prod) {
+  const method = prod.paymentMethod || '';
+  if (method === 'Efectivo') {
+    return `<span class="card-paid-na">N/A 💵</span>`;
+  }
+
+  // Por defecto, si no tiene la propiedad cardPaid guardada (compras viejas con tarjeta), se considera Pagada
+  const isPaid = prod.cardPaid ? prod.cardPaid === 'Si' : true;
+
+  if (isPaid) {
+    return `<button type="button" class="card-paid-btn paid" title="Clic para marcar como pendiente" onclick="toggleCardPaidStatus('${prod.id}', 'No')">✅ Pagada</button>`;
+  } else {
+    return `<button type="button" class="card-paid-btn pending" title="Clic para marcar como pagada" onclick="toggleCardPaidStatus('${prod.id}', 'Si')">⏳ Pendiente</button>`;
+  }
+}
+
+function toggleCardPaidStatus(docId, newStatus) {
+  db.collection("productos").doc(docId).update({
+    cardPaid: newStatus
+  });
+}
+
+function handlePaymentMethodChange(val) {
+  const cardGroup = document.getElementById('cardPaidGroup');
+  if (val === 'Efectivo') {
+    cardGroup.style.display = 'none';
+  } else {
+    cardGroup.style.display = 'block';
+  }
+}
+
+function handleEditPaymentMethodChange(val) {
+  const cardGroup = document.getElementById('editCardPaidGroup');
+  if (val === 'Efectivo') {
+    cardGroup.style.display = 'none';
+  } else {
+    cardGroup.style.display = 'block';
+  }
+}
+
 function toggleForm() {
   const isHidden = form.style.display === 'none';
   form.style.display = isHidden ? 'block' : 'none';
@@ -103,7 +143,6 @@ function toggleSoldPriceInput(status) {
   document.getElementById('soldPriceGroup').style.display = status === 'Vendido' ? 'block' : 'none';
 }
 
-// Filtro de Chips
 function setStatusFilter(status) {
   currentStatusFilter = status;
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -153,7 +192,6 @@ function updateMonthOptions() {
   });
 }
 
-// Lógica de Selección Múltiple
 function toggleProductSelection(docId, event) {
   if (event.target.closest('button') || event.target.closest('select') || event.target.closest('a')) {
     return;
@@ -173,7 +211,6 @@ function clearSelection() {
   render();
 }
 
-// Acciones en Lote (Bulk Actions)
 function bulkMarkAsSold() {
   if (selectedProductIds.size === 0) return;
   
@@ -220,7 +257,6 @@ function confirmBulkDelete() {
   });
 }
 
-// Lógica de Ordenamiento por Encabezados
 function handleSort(columnKey) {
   if (currentSortColumn === columnKey) {
     currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -233,7 +269,7 @@ function handleSort(columnKey) {
 }
 
 function updateSortIcons() {
-  const headers = ['name', 'paymentMethod', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining', 'status'];
+  const headers = ['name', 'paymentMethod', 'cardPaid', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining', 'status'];
   headers.forEach(h => {
     const icon = document.getElementById(`sort-${h}`);
     if (!icon) return;
@@ -260,12 +296,12 @@ function render() {
       const matchName = prod.name && prod.name.toLowerCase().includes(query);
       const matchPlatform = prod.platform && prod.platform.toLowerCase().includes(query);
       const matchPay = prod.paymentMethod && prod.paymentMethod.toLowerCase().includes(query);
-      if (!matchName && !matchPlatform && !matchPay) return false;
+      const matchCardPaid = prod.cardPaid && (prod.cardPaid === 'Si' ? 'pagada' : 'pendiente').includes(query);
+      if (!matchName && !matchPlatform && !matchPay && !matchCardPaid) return false;
     }
     return true;
   });
 
-  // Ordenamiento de tabla
   if (currentSortColumn) {
     filteredProducts.sort((a, b) => {
       let valA, valB;
@@ -291,12 +327,9 @@ function render() {
       } else if (currentSortColumn === 'daysRemaining') {
         valA = getReturnRemainingDays(a.arrivalDate);
         valB = getReturnRemainingDays(b.arrivalDate);
-      } else if (currentSortColumn === 'status') {
-        valA = (a.status || '').toLowerCase();
-        valB = (b.status || '').toLowerCase();
-      } else if (currentSortColumn === 'paymentMethod') {
-        valA = (a.paymentMethod || '').toLowerCase();
-        valB = (b.paymentMethod || '').toLowerCase();
+      } else if (currentSortColumn === 'cardPaid') {
+        valA = (a.cardPaid || 'Si').toLowerCase();
+        valB = (b.cardPaid || 'Si').toLowerCase();
       } else {
         valA = (a[currentSortColumn] || '').toString().toLowerCase();
         valB = (b[currentSortColumn] || '').toString().toLowerCase();
@@ -321,7 +354,6 @@ function render() {
     });
   }
 
-  // Manejo de Métricas: ¿Global o Selección?
   const hasSelection = selectedProductIds.size > 0;
   const metricsSource = hasSelection 
     ? filteredProducts.filter(p => selectedProductIds.has(p.id)) 
@@ -362,7 +394,6 @@ function render() {
     }
   });
 
-  // Renderizar filas de la tabla
   filteredProducts.forEach((prod) => {
     const cost = parseFloat(prod.cost) || 0;
     const targetPrice = parseFloat(prod.targetPrice) || 0;
@@ -410,6 +441,7 @@ function render() {
 
     const returnBadge = calculateReturnStatus(prod.arrivalDate, prod.status);
     const paymentBadge = formatPaymentBadge(prod.paymentMethod);
+    const cardPaidBadge = formatCardPaidBadge(prod);
 
     const linkHtml = prod.productUrl 
       ? `<a href="${escapeHtml(prod.productUrl)}" target="_blank" class="link-btn">🔗 Ver</a>` 
@@ -428,6 +460,7 @@ function render() {
     row.innerHTML = `
       <td><strong>${escapeHtml(prod.name)}</strong></td>
       <td>${paymentBadge}</td>
+      <td>${cardPaidBadge}</td>
       <td>${escapeHtml(prod.platform)}</td>
       <td>${formatCurrency(cost)}</td>
       <td>${formatCurrency(prod.status === 'Vendido' ? actualPrice : targetPrice)}</td>
@@ -458,7 +491,7 @@ function render() {
   });
 
   if (filteredProducts.length === 0) {
-    inventoryList.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
+    inventoryList.innerHTML = `<tr><td colspan="13" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
   }
 
   const subElem = document.getElementById('realized-profit-sub');
@@ -479,11 +512,13 @@ form.addEventListener('submit', (e) => {
   e.preventDefault();
 
   const status = document.getElementById('status').value;
+  const paymentMethod = document.getElementById('paymentMethod').value;
   const actualSoldPrice = document.getElementById('actualSoldPrice').value;
 
   const newProduct = {
     name: document.getElementById('name').value,
-    paymentMethod: document.getElementById('paymentMethod').value,
+    paymentMethod: paymentMethod,
+    cardPaid: paymentMethod === 'Efectivo' ? 'N/A' : document.getElementById('cardPaid').value,
     platform: document.getElementById('platform').value,
     cost: document.getElementById('cost').value,
     targetPrice: document.getElementById('targetPrice').value,
@@ -498,6 +533,8 @@ form.addEventListener('submit', (e) => {
   db.collection("productos").add(newProduct).then(() => {
     form.reset();
     document.getElementById('paymentMethod').value = 'Nu';
+    document.getElementById('cardPaid').value = 'No';
+    handlePaymentMethodChange('Nu');
     toggleSoldPriceInput('Disponible');
     buyDateInput.value = new Date().toISOString().split('T')[0];
     toggleForm();
@@ -511,6 +548,7 @@ function duplicateProduct(docId) {
   const duplicated = {
     name: original.name,
     paymentMethod: original.paymentMethod || 'Nu',
+    cardPaid: original.cardPaid || 'No',
     platform: original.platform,
     cost: original.cost,
     targetPrice: original.targetPrice,
@@ -531,7 +569,11 @@ function openEditModal(docId) {
 
   pendingEditDocId = docId;
   document.getElementById('edit-name').value = product.name || '';
-  document.getElementById('edit-paymentMethod').value = product.paymentMethod || 'Nu';
+  const payMethod = product.paymentMethod || 'Nu';
+  document.getElementById('edit-paymentMethod').value = payMethod;
+  handleEditPaymentMethodChange(payMethod);
+  document.getElementById('edit-cardPaid').value = product.cardPaid || 'Si';
+
   document.getElementById('edit-platform').value = product.platform || '';
   document.getElementById('edit-cost').value = product.cost || '';
   document.getElementById('edit-targetPrice').value = product.targetPrice || '';
@@ -551,9 +593,11 @@ function confirmEdit(e) {
   e.preventDefault();
   if (!pendingEditDocId) return;
 
+  const payMethod = document.getElementById('edit-paymentMethod').value;
   const updatedProduct = {
     name: document.getElementById('edit-name').value,
-    paymentMethod: document.getElementById('edit-paymentMethod').value,
+    paymentMethod: payMethod,
+    cardPaid: payMethod === 'Efectivo' ? 'N/A' : document.getElementById('edit-cardPaid').value,
     platform: document.getElementById('edit-platform').value,
     cost: document.getElementById('edit-cost').value,
     targetPrice: document.getElementById('edit-targetPrice').value,
@@ -628,7 +672,7 @@ function confirmDelete() {
 function exportToExcel() {
   if (products.length === 0) return alert("No hay productos para exportar.");
 
-  let csvContent = "\uFEFFProducto;Metodo Pago;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;ROI (%);Fecha Compra;Fecha Llegada;Fecha Venta;Dias en Stock;Estado;Link\n";
+  let csvContent = "\uFEFFProducto;Metodo Pago;Tarjeta Pagada;Plataforma;Costo Compra;Precio Venta Obj;Precio Real Venta;Ganancia;ROI (%);Fecha Compra;Fecha Llegada;Fecha Venta;Dias en Stock;Estado;Link\n";
 
   products.forEach(p => {
     const cost = parseFloat(p.cost) || 0;
@@ -638,7 +682,7 @@ function exportToExcel() {
     const roi = cost > 0 ? ((profit / cost) * 100).toFixed(1) : '0';
     const days = calculateDays(p.buyDate, p.sellDate);
 
-    csvContent += `"${p.name}";"${p.paymentMethod || '-'}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};${roi}%;"${p.buyDate}";"${p.arrivalDate || '-'}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
+    csvContent += `"${p.name}";"${p.paymentMethod || '-'}";"${p.cardPaid || 'Si'}";"${p.platform}";${cost};${target};${p.actualPrice || '-'};${profit};${roi}%;"${p.buyDate}";"${p.arrivalDate || '-'}";"${p.sellDate || '-'}";${days};"${p.status}";"${p.productUrl || '-'}"\n`;
   });
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

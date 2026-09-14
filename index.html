@@ -23,8 +23,8 @@
   <div class="filter-card">
     <div class="filter-grid">
       <div class="filter-group">
-        <label for="search-input">Buscar Producto / Plataforma:</label>
-        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Nu, Amazon..." oninput="render()">
+        <label for="search-input">Buscar Producto / Plataforma / Pago:</label>
+        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Nu, Pendiente..." oninput="render()">
       </div>
 
       <div class="filter-group">
@@ -104,11 +104,18 @@
         </div>
         <div>
           <label for="paymentMethod">Método de Pago</label>
-          <select id="paymentMethod" required>
+          <select id="paymentMethod" onchange="handlePaymentMethodChange(this.value)" required>
             <option value="Nu">Tarjeta Nu 💜</option>
             <option value="Rappi">Tarjeta Rappi 🧡</option>
             <option value="Efectivo">Efectivo / Débito 💵</option>
             <option value="Otra">Otra Tarjeta 💳</option>
+          </select>
+        </div>
+        <div id="cardPaidGroup">
+          <label for="cardPaid">¿Tarjeta Pagada?</label>
+          <select id="cardPaid">
+            <option value="No">⏳ Pendiente</option>
+            <option value="Si">✅ Pagada</option>
           </select>
         </div>
         <div>
@@ -155,6 +162,7 @@
         <tr>
           <th class="sortable-th" onclick="handleSort('name')">Producto <span class="sort-icon" id="sort-name">↕</span></th>
           <th class="sortable-th" onclick="handleSort('paymentMethod')">Pago <span class="sort-icon" id="sort-paymentMethod">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('cardPaid')">Tarjeta Pagada <span class="sort-icon" id="sort-cardPaid">↕</span></th>
           <th class="sortable-th" onclick="handleSort('platform')">Plataforma <span class="sort-icon" id="sort-platform">↕</span></th>
           <th class="sortable-th" onclick="handleSort('cost')">Costo <span class="sort-icon" id="sort-cost">↕</span></th>
           <th class="sortable-th" onclick="handleSort('targetPrice')">Venta Obj. / Real <span class="sort-icon" id="sort-targetPrice">↕</span></th>
@@ -186,11 +194,18 @@
         </div>
         <div>
           <label for="edit-paymentMethod">Método de Pago</label>
-          <select id="edit-paymentMethod" required>
+          <select id="edit-paymentMethod" onchange="handleEditPaymentMethodChange(this.value)" required>
             <option value="Nu">Tarjeta Nu 💜</option>
             <option value="Rappi">Tarjeta Rappi 🧡</option>
             <option value="Efectivo">Efectivo / Débito 💵</option>
             <option value="Otra">Otra Tarjeta 💳</option>
+          </select>
+        </div>
+        <div id="editCardPaidGroup">
+          <label for="edit-cardPaid">¿Tarjeta Pagada?</label>
+          <select id="edit-cardPaid">
+            <option value="No">⏳ Pendiente</option>
+            <option value="Si">✅ Pagada</option>
           </select>
         </div>
         <div>
