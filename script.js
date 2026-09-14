@@ -15,7 +15,10 @@ let pendingSaleDocId = null;
 let pendingDeleteDocId = null;
 let pendingEditDocId = null;
 
-let currentStatusFilter = 'ALL';
+// Pestaña activa: 'stock' (por defecto) o 'history'
+let currentView = 'stock';
+let currentSubFilter = 'ALL';
+
 let selectedProductIds = new Set();
 let currentSortColumn = null;
 let currentSortDirection = 'asc';
@@ -36,7 +39,7 @@ db.collection("productos").onSnapshot((snapshot) => {
     ...doc.data()
   }));
   updateMonthOptions();
-  updateChipCounters();
+  updateTabCounters();
   render();
 });
 
@@ -92,14 +95,12 @@ function formatPaymentBadge(method) {
   }
 }
 
-// Renderizar columna "Tarjeta Pagada" con toggle interactivo
 function formatCardPaidBadge(prod) {
   const method = prod.paymentMethod || '';
   if (method === 'Efectivo') {
     return `<span class="card-paid-na">N/A 💵</span>`;
   }
 
-  // Por defecto, si no tiene la propiedad cardPaid guardada (compras viejas con tarjeta), se considera Pagada
   const isPaid = prod.cardPaid ? prod.cardPaid === 'Si' : true;
 
   if (isPaid) {
@@ -117,20 +118,12 @@ function toggleCardPaidStatus(docId, newStatus) {
 
 function handlePaymentMethodChange(val) {
   const cardGroup = document.getElementById('cardPaidGroup');
-  if (val === 'Efectivo') {
-    cardGroup.style.display = 'none';
-  } else {
-    cardGroup.style.display = 'block';
-  }
+  cardGroup.style.display = val === 'Efectivo' ? 'none' : 'block';
 }
 
 function handleEditPaymentMethodChange(val) {
   const cardGroup = document.getElementById('editCardPaidGroup');
-  if (val === 'Efectivo') {
-    cardGroup.style.display = 'none';
-  } else {
-    cardGroup.style.display = 'block';
-  }
+  cardGroup.style.display = val === 'Efectivo' ? 'none' : 'block';
 }
 
 function toggleForm() {
@@ -143,30 +136,76 @@ function toggleSoldPriceInput(status) {
   document.getElementById('soldPriceGroup').style.display = status === 'Vendido' ? 'block' : 'none';
 }
 
-function setStatusFilter(status) {
-  currentStatusFilter = status;
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  const activeBtn = document.getElementById(`chip-${status}`);
-  if (activeBtn) activeBtn.classList.add('active');
+// Navegación de Pestañas Principales
+function switchView(view) {
+  currentView = view;
+  currentSubFilter = 'ALL';
+  clearSelection();
+
+  document.getElementById('tab-stock').classList.toggle('active', view === 'stock');
+  document.getElementById('tab-history').classList.toggle('active', view === 'history');
+
+  // Ajustar visibilidad del botón de marcar vendidos en lote
+  const bulkSellBtn = document.getElementById('btn-bulk-sell');
+  if (bulkSellBtn) {
+    bulkSellBtn.style.display = view === 'stock' ? 'inline-block' : 'none';
+  }
+
+  renderSubFilters();
   render();
 }
 
-function updateChipCounters() {
-  const total = products.length;
-  const disp = products.filter(p => p.status === 'Disponible').length;
-  const sold = products.filter(p => p.status === 'Vendido').length;
-  const ret = products.filter(p => p.status === 'Devuelto').length;
+function renderSubFilters() {
+  const container = document.getElementById('subfilter-container');
+  if (currentView === 'stock') {
+    const transitCount = products.filter(p => p.status === 'Disponible' && !p.arrivalDate).length;
+    const warehouseCount = products.filter(p => p.status === 'Disponible' && p.arrivalDate).length;
+    const allStock = transitCount + warehouseCount;
 
-  document.getElementById('count-chip-all').innerText = `(${total})`;
-  document.getElementById('count-chip-disp').innerText = `(${disp})`;
-  document.getElementById('count-chip-sold').innerText = `(${sold})`;
-  document.getElementById('count-chip-ret').innerText = `(${ret})`;
+    container.innerHTML = `
+      <label>Filtrar Stock:</label>
+      <div class="status-chips">
+        <button type="button" class="chip ${currentSubFilter === 'ALL' ? 'active' : ''}" onclick="setSubFilter('ALL')">Todos (${allStock})</button>
+        <button type="button" class="chip ${currentSubFilter === 'TRANSIT' ? 'active' : ''}" onclick="setSubFilter('TRANSIT')">🚚 En camino (${transitCount})</button>
+        <button type="button" class="chip ${currentSubFilter === 'WAREHOUSE' ? 'active' : ''}" onclick="setSubFilter('WAREHOUSE')">📦 En bodega (${warehouseCount})</button>
+      </div>
+    `;
+  } else {
+    const soldCount = products.filter(p => p.status === 'Vendido').length;
+    const retCount = products.filter(p => p.status === 'Devuelto').length;
+    const allHistory = soldCount + retCount;
+
+    container.innerHTML = `
+      <label>Filtrar Historial:</label>
+      <div class="status-chips">
+        <button type="button" class="chip ${currentSubFilter === 'ALL' ? 'active' : ''}" onclick="setSubFilter('ALL')">Todo el Historial (${allHistory})</button>
+        <button type="button" class="chip ${currentSubFilter === 'Vendido' ? 'active' : ''}" onclick="setSubFilter('Vendido')">🔵 Vendidos (${soldCount})</button>
+        <button type="button" class="chip ${currentSubFilter === 'Devuelto' ? 'active' : ''}" onclick="setSubFilter('Devuelto')">⚪ Devueltos (${retCount})</button>
+      </div>
+    `;
+  }
+}
+
+function setSubFilter(filter) {
+  currentSubFilter = filter;
+  renderSubFilters();
+  render();
+}
+
+function updateTabCounters() {
+  const stockCount = products.filter(p => p.status === 'Disponible').length;
+  const historyCount = products.filter(p => p.status === 'Vendido' || p.status === 'Devuelto').length;
+
+  document.getElementById('badge-stock-count').innerText = stockCount;
+  document.getElementById('badge-history-count').innerText = historyCount;
+  renderSubFilters();
 }
 
 function resetFilters() {
   monthFilterSelect.value = 'ALL';
   searchInput.value = '';
-  setStatusFilter('ALL');
+  currentSubFilter = 'ALL';
+  renderSubFilters();
   clearSelection();
 }
 
@@ -219,7 +258,7 @@ function bulkMarkAsSold() {
 
   selectedProductIds.forEach(id => {
     const prod = products.find(p => p.id === id);
-    if (prod && prod.status !== 'Vendido') {
+    if (prod && prod.status === 'Disponible') {
       const docRef = db.collection("productos").doc(id);
       batch.update(docRef, {
         status: 'Vendido',
@@ -289,9 +328,19 @@ function render() {
   const filterMonth = monthFilterSelect.value;
   const query = searchInput.value.toLowerCase().trim();
 
+  // 1. Filtrar primero por la Pestaña Principal
   let filteredProducts = products.filter(prod => {
+    if (currentView === 'stock') {
+      if (prod.status !== 'Disponible') return false;
+      if (currentSubFilter === 'TRANSIT' && prod.arrivalDate) return false;
+      if (currentSubFilter === 'WAREHOUSE' && !prod.arrivalDate) return false;
+    } else {
+      if (prod.status !== 'Vendido' && prod.status !== 'Devuelto') return false;
+      if (currentSubFilter !== 'ALL' && prod.status !== currentSubFilter) return false;
+    }
+
     if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return false;
-    if (currentStatusFilter !== 'ALL' && prod.status !== currentStatusFilter) return false;
+
     if (query) {
       const matchName = prod.name && prod.name.toLowerCase().includes(query);
       const matchPlatform = prod.platform && prod.platform.toLowerCase().includes(query);
@@ -299,9 +348,11 @@ function render() {
       const matchCardPaid = prod.cardPaid && (prod.cardPaid === 'Si' ? 'pagada' : 'pendiente').includes(query);
       if (!matchName && !matchPlatform && !matchPay && !matchCardPaid) return false;
     }
+
     return true;
   });
 
+  // 2. Ordenar productos
   if (currentSortColumn) {
     filteredProducts.sort((a, b) => {
       let valA, valB;
@@ -341,19 +392,19 @@ function render() {
     });
   } else {
     filteredProducts.sort((a, b) => {
-      if (a.status !== b.status) {
-        if (a.status === 'Disponible') return -1;
-        if (b.status === 'Disponible') return 1;
-        if (a.status === 'Vendido') return -1;
-        return 1;
-      }
-      if (a.status === 'Disponible') {
+      if (currentView === 'stock') {
+        // En stock: los que tienen menos días de devolución primero
         return getReturnRemainingDays(a.arrivalDate) - getReturnRemainingDays(b.arrivalDate);
+      } else {
+        // En historial: ventas más recientes arriba
+        const dateA = a.sellDate || a.buyDate || '';
+        const dateB = b.sellDate || b.buyDate || '';
+        return dateB.localeCompare(dateA);
       }
-      return 0;
     });
   }
 
+  // 3. Selección y métricas
   const hasSelection = selectedProductIds.size > 0;
   const metricsSource = hasSelection 
     ? filteredProducts.filter(p => selectedProductIds.has(p.id)) 
@@ -366,34 +417,10 @@ function render() {
     selectionBanner.style.display = 'none';
   }
 
-  let totalInvested = 0;
-  let capitalRecovered = 0;
-  let realizedProfit = 0;
-  let capitalAtRisk = 0;
-  let projectedProfit = 0;
-  let unitsInStock = 0;
-  let unitsSold = 0;
+  // 4. Renderizado de Tarjetas según pestaña activa
+  renderMetricsCards(metricsSource);
 
-  metricsSource.forEach(prod => {
-    const cost = parseFloat(prod.cost) || 0;
-    const targetPrice = parseFloat(prod.targetPrice) || 0;
-    const actualPrice = prod.actualPrice ? parseFloat(prod.actualPrice) : targetPrice;
-
-    totalInvested += cost;
-
-    if (prod.status === 'Vendido') {
-      capitalRecovered += actualPrice;
-      realizedProfit += (actualPrice - cost);
-      unitsSold++;
-    } else if (prod.status === 'Devuelto') {
-      capitalRecovered += cost;
-    } else {
-      capitalAtRisk += cost;
-      projectedProfit += (targetPrice - cost);
-      unitsInStock++;
-    }
-  });
-
+  // 5. Renderizar filas de tabla
   filteredProducts.forEach((prod) => {
     const cost = parseFloat(prod.cost) || 0;
     const targetPrice = parseFloat(prod.targetPrice) || 0;
@@ -491,21 +518,122 @@ function render() {
   });
 
   if (filteredProducts.length === 0) {
-    inventoryList.innerHTML = `<tr><td colspan="13" style="text-align:center; padding: 20px; color: #9ca3af;">No se encontraron productos registrados.</td></tr>`;
+    const emptyMsg = currentView === 'stock' 
+      ? 'No hay productos en stock o en camino en este momento.' 
+      : 'No hay productos en el historial para este filtro.';
+    inventoryList.innerHTML = `<tr><td colspan="13" style="text-align:center; padding: 25px; color: #9ca3af;">${emptyMsg}</td></tr>`;
   }
+}
 
-  const subElem = document.getElementById('realized-profit-sub');
-  subElem.innerText = `${realizedProfit >= 0 ? '+' : ''} ${formatCurrency(realizedProfit)} de Ganancia Real`;
-  subElem.className = `sub-text ${realizedProfit >= 0 ? 'text-green' : 'text-red'}`;
+// Renderizado Dinámico de las 4 Tarjetas de Métricas
+function renderMetricsCards(sourceList) {
+  const grid = document.getElementById('metrics-grid');
 
-  document.getElementById('total-invested').innerText = formatCurrency(totalInvested);
-  document.getElementById('capital-recovered').innerText = formatCurrency(capitalRecovered);
-  document.getElementById('capital-at-risk').innerText = formatCurrency(capitalAtRisk);
-  
-  document.getElementById('units-in-stock').innerText = `${unitsInStock} producto${unitsInStock !== 1 ? 's' : ''} en stock`;
-  document.getElementById('units-sold').innerText = `${unitsSold} producto${unitsSold !== 1 ? 's' : ''} vendido${unitsSold !== 1 ? 's' : ''}`;
-  
-  document.getElementById('projected-profit').innerText = formatCurrency(projectedProfit);
+  if (currentView === 'stock') {
+    let stockCapital = 0;
+    let cardDebt = 0;
+    let projectedProfit = 0;
+    let inTransit = 0;
+    let inWarehouse = 0;
+
+    sourceList.forEach(prod => {
+      const cost = parseFloat(prod.cost) || 0;
+      const target = parseFloat(prod.targetPrice) || 0;
+
+      stockCapital += cost;
+      projectedProfit += (target - cost);
+
+      // Deuda de tarjeta: compras con tarjeta pendientes de pago
+      if (prod.paymentMethod !== 'Efectivo' && prod.cardPaid === 'No') {
+        cardDebt += cost;
+      }
+
+      if (prod.arrivalDate) inWarehouse++;
+      else inTransit++;
+    });
+
+    const totalUnits = inTransit + inWarehouse;
+
+    grid.innerHTML = `
+      <div class="card-summary">
+        <p>Capital en Stock (Riesgo)</p>
+        <h2 class="text-warning">${formatCurrency(stockCapital)}</h2>
+        <span class="sub-text text-gray">${totalUnits} producto${totalUnits !== 1 ? 's' : ''} activo${totalUnits !== 1 ? 's' : ''}</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Deuda Tarjetas (Stock)</p>
+        <h2 class="${cardDebt > 0 ? 'text-red' : 'text-green'}">${formatCurrency(cardDebt)}</h2>
+        <span class="sub-text text-gray">${cardDebt > 0 ? '⏳ Pendiente por girar' : '✅ Todo saldado'}</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Ganancia Proyectada</p>
+        <h2 class="text-est">${formatCurrency(projectedProfit)}</h2>
+        <span class="sub-text text-gray">Venta estimada al 100%</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Estado Físico Stock</p>
+        <h2 class="text-blue">${inWarehouse} en bodega</h2>
+        <span class="sub-text text-gray">🚚 ${inTransit} en camino</span>
+      </div>
+    `;
+  } else {
+    let capitalRecovered = 0;
+    let realizedProfit = 0;
+    let totalCostSold = 0;
+    let totalDaysSold = 0;
+    let soldCount = 0;
+    let returnCount = 0;
+
+    sourceList.forEach(prod => {
+      const cost = parseFloat(prod.cost) || 0;
+      const actual = prod.actualPrice ? parseFloat(prod.actualPrice) : (parseFloat(prod.targetPrice) || 0);
+
+      if (prod.status === 'Vendido') {
+        capitalRecovered += actual;
+        realizedProfit += (actual - cost);
+        totalCostSold += cost;
+        soldCount++;
+
+        const start = prod.arrivalDate || prod.buyDate;
+        totalDaysSold += calculateDays(start, prod.sellDate);
+      } else if (prod.status === 'Devuelto') {
+        capitalRecovered += cost; // Reembolsado 100%
+        returnCount++;
+      }
+    });
+
+    const avgRoi = totalCostSold > 0 ? ((realizedProfit / totalCostSold) * 100).toFixed(1) : 0;
+    const avgDays = soldCount > 0 ? Math.round(totalDaysSold / soldCount) : 0;
+
+    grid.innerHTML = `
+      <div class="card-summary">
+        <p>Capital Total Recuperado</p>
+        <h2 class="text-blue">${formatCurrency(capitalRecovered)}</h2>
+        <span class="sub-text text-gray">${soldCount} vendido${soldCount !== 1 ? 's' : ''} / ${returnCount} devuelto${returnCount !== 1 ? 's' : ''}</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Ganancia Real Neta</p>
+        <h2 class="${realizedProfit >= 0 ? 'text-green' : 'text-red'}">${realizedProfit >= 0 ? '+' : ''}${formatCurrency(realizedProfit)}</h2>
+        <span class="sub-text ${realizedProfit >= 0 ? 'text-green' : 'text-red'}">Dinero limpio en mano</span>
+      </div>
+
+      <div class="card-summary">
+        <p>ROI Promedio Histórico</p>
+        <h2 class="text-green">+${avgRoi}%</h2>
+        <span class="sub-text text-gray">Retorno sobre costo</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Velocidad de Rotación</p>
+        <h2 class="text-blue">${avgDays} días</h2>
+        <span class="sub-text text-gray">Tiempo promedio de venta</span>
+      </div>
+    `;
+  }
 }
 
 form.addEventListener('submit', (e) => {

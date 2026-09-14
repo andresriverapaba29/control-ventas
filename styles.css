@@ -24,7 +24,6 @@ body {
   padding: 12px;
 }
 
-/* Ancho ampliado para contener todas las columnas con holgura */
 .container {
   max-width: 1780px;
   width: 98%;
@@ -32,10 +31,58 @@ body {
 }
 
 h1 {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   font-size: 1.6rem;
   text-align: center;
   color: #111827;
+}
+
+/* Pestañas Principales (Stock vs Historial) */
+.main-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  justify-content: center;
+}
+
+.tab-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: #4b5563;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.tab-btn:hover {
+  background: #f9fafb;
+  border-color: #cbd5e1;
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+.tab-badge {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+}
+
+.tab-btn.active .tab-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
 }
 
 /* Filtros */
@@ -62,7 +109,6 @@ h1 {
   margin-bottom: 5px;
 }
 
-/* Píldoras / Chips de Estado */
 .filter-group-chips {
   grid-column: span 2;
 }
@@ -90,8 +136,8 @@ h1 {
 }
 
 .chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: #334155;
+  border-color: #334155;
   color: white;
 }
 
@@ -221,7 +267,7 @@ h1 {
 .text-warning { color: var(--warning); }
 .text-gray { color: #6b7280; font-weight: 600; }
 
-/* Badges de Métodos de Pago */
+/* Badges de Pago */
 .pay-badge {
   display: inline-block;
   padding: 3px 7px;
@@ -230,26 +276,10 @@ h1 {
   font-weight: 700;
   white-space: nowrap;
 }
-.pay-nu {
-  background-color: #f3e8ff;
-  color: #7e22ce;
-  border: 1px solid #d8b4fe;
-}
-.pay-rappi {
-  background-color: #ffedd5;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
-}
-.pay-cash {
-  background-color: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
-}
-.pay-other {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
-}
+.pay-nu { background-color: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+.pay-rappi { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+.pay-cash { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.pay-other { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
 /* Badges del Estado de la Tarjeta */
 .card-paid-btn {
@@ -262,19 +292,9 @@ h1 {
   transition: transform 0.1s ease;
   white-space: nowrap;
 }
-.card-paid-btn:hover {
-  transform: scale(1.04);
-}
-.card-paid-btn.paid {
-  background-color: #dcfce7;
-  color: #15803d;
-  border: 1px solid #86efac;
-}
-.card-paid-btn.pending {
-  background-color: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fcd34d;
-}
+.card-paid-btn:hover { transform: scale(1.04); }
+.card-paid-btn.paid { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.card-paid-btn.pending { background-color: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
 .card-paid-na {
   display: inline-block;
   padding: 3px 7px;
@@ -303,10 +323,7 @@ h1 {
   user-select: none;
 }
 
-.form-header h3 {
-  font-size: 1rem;
-  color: #1f2937;
-}
+.form-header h3 { font-size: 1rem; color: #1f2937; }
 
 .form-grid {
   display: grid;
@@ -332,9 +349,7 @@ input, select {
   background-color: #fff;
 }
 
-input:focus, select:focus {
-  border-color: var(--primary);
-}
+input:focus, select:focus { border-color: var(--primary); }
 
 button[type="submit"] {
   background: var(--primary);
@@ -349,11 +364,9 @@ button[type="submit"] {
   font-size: 0.95rem;
 }
 
-button[type="submit"]:hover {
-  background-color: var(--primary-hover);
-}
+button[type="submit"]:hover { background-color: var(--primary-hover); }
 
-/* Tabla Adaptable sin barras deslizantes */
+/* Tabla Adaptable */
 .table-container {
   background: var(--card);
   border-radius: 12px;
@@ -369,7 +382,7 @@ table {
 }
 
 th, td {
-  padding: 9px 6px; /* Distribución equilibrada para que quepan todas las columnas */
+  padding: 9px 6px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
@@ -381,7 +394,6 @@ th {
   user-select: none;
 }
 
-/* Encabezados Ordenables */
 .sortable-th {
   cursor: pointer;
   transition: background-color 0.15s;
@@ -398,33 +410,18 @@ th {
   margin-left: 2px;
 }
 
-.sortable-th:hover .sort-icon {
-  color: var(--primary);
-}
+.sortable-th:hover .sort-icon { color: var(--primary); }
 
-/* Filas Interactivas */
 tbody tr {
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
-tbody tr:hover {
-  background-color: #f8fafc;
-}
+tbody tr:hover { background-color: #f8fafc; }
 
-tr.row-selected {
-  background-color: #e0f2fe !important;
-}
-
-tr.row-sold {
-  background-color: #f8fafc;
-  opacity: 0.85;
-}
-
-tr.row-returned {
-  background-color: #f3f4f6;
-  opacity: 0.75;
-}
+tr.row-selected { background-color: #e0f2fe !important; }
+tr.row-sold { background-color: #f8fafc; opacity: 0.85; }
+tr.row-returned { background-color: #f3f4f6; opacity: 0.75; }
 
 .roi-badge {
   display: block;
@@ -443,17 +440,9 @@ tr.row-returned {
   color: #374151;
 }
 
-.time-badge.sold {
-  background-color: #dcfce7;
-  color: #15803d;
-}
+.time-badge.sold { background-color: #dcfce7; color: #15803d; }
+.time-badge.returned { background-color: #e5e7eb; color: #4b5563; }
 
-.time-badge.returned {
-  background-color: #e5e7eb;
-  color: #4b5563;
-}
-
-/* Badges de Devolución */
 .return-badge {
   display: inline-block;
   padding: 3px 6px;
@@ -488,7 +477,6 @@ tr.row-returned {
   cursor: pointer;
 }
 
-/* Acciones garantizadas en una línea sin desbordamiento */
 .action-buttons {
   display: flex;
   gap: 4px;
@@ -549,9 +537,10 @@ tr.row-returned {
 .btn-cancel { background: #e5e7eb; color: #374151; }
 .btn-confirm { background: var(--success); color: white; }
 
-/* Móviles */
+/* Reglas Móviles */
 @media (max-width: 600px) {
   body { padding: 8px; }
+  .main-tabs { flex-direction: column; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .table-container { overflow-x: auto; }

@@ -19,6 +19,16 @@
 <div class="container">
   <h1>Control de Compras y Ventas</h1>
 
+  <!-- Pestañas de Navegación Principal -->
+  <div class="main-tabs">
+    <button type="button" class="tab-btn active" id="tab-stock" onclick="switchView('stock')">
+      📦 Stock Activo <span class="tab-badge" id="badge-stock-count">0</span>
+    </button>
+    <button type="button" class="tab-btn" id="tab-history" onclick="switchView('history')">
+      📊 Historial de Ventas <span class="tab-badge" id="badge-history-count">0</span>
+    </button>
+  </div>
+
   <!-- Controles y Filtros -->
   <div class="filter-card">
     <div class="filter-grid">
@@ -34,14 +44,9 @@
         </select>
       </div>
 
-      <div class="filter-group-chips">
-        <label>Filtrar por Estado:</label>
-        <div class="status-chips">
-          <button type="button" class="chip active" id="chip-ALL" onclick="setStatusFilter('ALL')">Todos <span id="count-chip-all">(0)</span></button>
-          <button type="button" class="chip" id="chip-Disponible" onclick="setStatusFilter('Disponible')">🟢 En Stock <span id="count-chip-disp">(0)</span></button>
-          <button type="button" class="chip" id="chip-Vendido" onclick="setStatusFilter('Vendido')">🔵 Vendidos <span id="count-chip-sold">(0)</span></button>
-          <button type="button" class="chip" id="chip-Devuelto" onclick="setStatusFilter('Devuelto')">⚪ Devueltos <span id="count-chip-ret">(0)</span></button>
-        </div>
+      <!-- Subfiltros específicos por pestaña -->
+      <div class="filter-group-chips" id="subfilter-container">
+        <!-- Renderizado dinámico según la pestaña activa -->
       </div>
 
       <div class="filter-actions">
@@ -57,36 +62,15 @@
       <span id="selection-count-text">Calculando métricas de 0 seleccionados</span>
     </div>
     <div class="selection-actions">
-      <button type="button" class="btn-bulk-sell" onclick="bulkMarkAsSold()">🎉 Marcar Vendidos</button>
+      <button type="button" class="btn-bulk-sell" id="btn-bulk-sell" onclick="bulkMarkAsSold()">🎉 Marcar Vendidos</button>
       <button type="button" class="btn-bulk-delete" onclick="openBulkDeleteModal()">🗑️ Eliminar Lote</button>
       <button type="button" class="btn-clear-selection" onclick="clearSelection()">✖ Limpiar</button>
     </div>
   </div>
 
-  <!-- Tarjetas de Métricas -->
-  <div class="summary-grid">
-    <div class="card-summary">
-      <p>Total Invertido</p>
-      <h2 id="total-invested">$0</h2>
-    </div>
-
-    <div class="card-summary">
-      <p>Capital Recuperado</p>
-      <h2 id="capital-recovered" class="text-blue">$0</h2>
-      <span class="sub-text" id="realized-profit-sub">+ $0 de Ganancia</span>
-      <span class="sub-text text-gray" id="units-sold">0 productos vendidos</span>
-    </div>
-
-    <div class="card-summary">
-      <p>Capital en Riesgo (Stock)</p>
-      <h2 id="capital-at-risk" class="text-warning">$0</h2>
-      <span class="sub-text text-gray" id="units-in-stock">0 productos en stock</span>
-    </div>
-
-    <div class="card-summary">
-      <p>Ganancia Proyectada</p>
-      <h2 id="projected-profit" class="text-est">$0</h2>
-    </div>
+  <!-- Tarjetas de Métricas Dinámicas según la Pestaña -->
+  <div class="summary-grid" id="metrics-grid">
+    <!-- Renderizado dinámicamente según 'stock' o 'history' -->
   </div>
 
   <!-- Formulario de Registro Plegable -->
@@ -165,7 +149,7 @@
           <th class="sortable-th" onclick="handleSort('cardPaid')">Tarjeta Pagada <span class="sort-icon" id="sort-cardPaid">↕</span></th>
           <th class="sortable-th" onclick="handleSort('platform')">Plataforma <span class="sort-icon" id="sort-platform">↕</span></th>
           <th class="sortable-th" onclick="handleSort('cost')">Costo <span class="sort-icon" id="sort-cost">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('targetPrice')">Venta Obj. / Real <span class="sort-icon" id="sort-targetPrice">↕</span></th>
+          <th class="sortable-th" onclick="handleSort('targetPrice')" id="th-target-price">Venta Obj. / Real <span class="sort-icon" id="sort-targetPrice">↕</span></th>
           <th class="sortable-th" onclick="handleSort('profit')">Ganancia / ROI <span class="sort-icon" id="sort-profit">↕</span></th>
           <th class="sortable-th" onclick="handleSort('buyDate')">Fecha Compra <span class="sort-icon" id="sort-buyDate">↕</span></th>
           <th class="sortable-th" onclick="handleSort('daysInStock')">Tiempo Stock <span class="sort-icon" id="sort-daysInStock">↕</span></th>
