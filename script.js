@@ -14,8 +14,9 @@ let products = [];
 let pendingSaleDocId = null;
 let pendingDeleteDocId = null;
 let pendingEditDocId = null;
+let pendingCutCard = null;
 
-// Pestaña activa: 'stock' (por defecto) o 'history'
+// Pestaña activa: 'stock' (por defecto), 'history' o 'debts'
 let currentView = 'stock';
 let currentSubFilter = 'ALL';
 
@@ -144,15 +145,66 @@ function switchView(view) {
 
   document.getElementById('tab-stock').classList.toggle('active', view === 'stock');
   document.getElementById('tab-history').classList.toggle('active', view === 'history');
+  document.getElementById('tab-debts').classList.toggle('active', view === 'debts');
 
-  // Ajustar visibilidad del botón de marcar vendidos en lote
+  // Mostrar u ocultar barra de corte de deudas
+  const debtBar = document.getElementById('debt-actions-bar');
+  if (debtBar) {
+    debtBar.style.display = view === 'debts' ? 'flex' : 'none';
+  }
+
+  // Ocultar formulario de registro al estar en deudas para mayor limpieza visual
+  const formCard = document.getElementById('product-form-card');
+  if (formCard) {
+    formCard.style.display = view === 'debts' ? 'none' : 'block';
+  }
+
+  // Botón marcar vendidos en lote
   const bulkSellBtn = document.getElementById('btn-bulk-sell');
   if (bulkSellBtn) {
     bulkSellBtn.style.display = view === 'stock' ? 'inline-block' : 'none';
   }
 
   renderSubFilters();
+  renderTableHeader();
   render();
+}
+
+function renderTableHeader() {
+  const thead = document.getElementById('table-head');
+  
+  if (currentView === 'debts') {
+    thead.innerHTML = `
+      <tr>
+        <th class="sortable-th" onclick="handleSort('name')">Producto <span class="sort-icon" id="sort-name">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('paymentMethod')">Tarjeta <span class="sort-icon" id="sort-paymentMethod">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('cost')">Deuda Pendiente ($) <span class="sort-icon" id="sort-cost">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('debtStatus')">Semáforo de Respaldo <span class="sort-icon" id="sort-debtStatus">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('platform')">Plataforma <span class="sort-icon" id="sort-platform">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('buyDate')">Fecha Compra <span class="sort-icon" id="sort-buyDate">↕</span></th>
+        <th>Estado del Producto</th>
+        <th>Acción Rápida</th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th class="sortable-th" onclick="handleSort('name')">Producto <span class="sort-icon" id="sort-name">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('paymentMethod')">Pago <span class="sort-icon" id="sort-paymentMethod">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('cardPaid')">Tarjeta Pagada <span class="sort-icon" id="sort-cardPaid">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('platform')">Plataforma <span class="sort-icon" id="sort-platform">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('cost')">Costo <span class="sort-icon" id="sort-cost">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('targetPrice')">Venta Obj. / Real <span class="sort-icon" id="sort-targetPrice">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('profit')">Ganancia / ROI <span class="sort-icon" id="sort-profit">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('buyDate')">Fecha Compra <span class="sort-icon" id="sort-buyDate">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('daysInStock')">Tiempo Stock <span class="sort-icon" id="sort-daysInStock">↕</span></th>
+        <th class="sortable-th" onclick="handleSort('daysRemaining')">Plazo Devolución <span class="sort-icon" id="sort-daysRemaining">↕</span></th>
+        <th>Link</th>
+        <th class="sortable-th" onclick="handleSort('status')">Estado <span class="sort-icon" id="sort-status">↕</span></th>
+        <th>Acciones</th>
+      </tr>
+    `;
+  }
 }
 
 function renderSubFilters() {
@@ -170,7 +222,7 @@ function renderSubFilters() {
         <button type="button" class="chip ${currentSubFilter === 'WAREHOUSE' ? 'active' : ''}" onclick="setSubFilter('WAREHOUSE')">📦 En bodega (${warehouseCount})</button>
       </div>
     `;
-  } else {
+  } else if (currentView === 'history') {
     const soldCount = products.filter(p => p.status === 'Vendido').length;
     const retCount = products.filter(p => p.status === 'Devuelto').length;
     const allHistory = soldCount + retCount;
@@ -181,6 +233,20 @@ function renderSubFilters() {
         <button type="button" class="chip ${currentSubFilter === 'ALL' ? 'active' : ''}" onclick="setSubFilter('ALL')">Todo el Historial (${allHistory})</button>
         <button type="button" class="chip ${currentSubFilter === 'Vendido' ? 'active' : ''}" onclick="setSubFilter('Vendido')">🔵 Vendidos (${soldCount})</button>
         <button type="button" class="chip ${currentSubFilter === 'Devuelto' ? 'active' : ''}" onclick="setSubFilter('Devuelto')">⚪ Devueltos (${retCount})</button>
+      </div>
+    `;
+  } else {
+    // Subfiltros para Deudas
+    const pendingDebts = products.filter(p => p.paymentMethod !== 'Efectivo' && p.cardPaid === 'No');
+    const nuCount = pendingDebts.filter(p => p.paymentMethod === 'Nu').length;
+    const rappiCount = pendingDebts.filter(p => p.paymentMethod === 'Rappi').length;
+
+    container.innerHTML = `
+      <label>Filtrar Deudas:</label>
+      <div class="status-chips">
+        <button type="button" class="chip ${currentSubFilter === 'ALL' ? 'active' : ''}" onclick="setSubFilter('ALL')">Todas las Deudas (${pendingDebts.length})</button>
+        <button type="button" class="chip ${currentSubFilter === 'Nu' ? 'active' : ''}" onclick="setSubFilter('Nu')">💜 Nu (${nuCount})</button>
+        <button type="button" class="chip ${currentSubFilter === 'Rappi' ? 'active' : ''}" onclick="setSubFilter('Rappi')">🧡 Rappi (${rappiCount})</button>
       </div>
     `;
   }
@@ -195,9 +261,23 @@ function setSubFilter(filter) {
 function updateTabCounters() {
   const stockCount = products.filter(p => p.status === 'Disponible').length;
   const historyCount = products.filter(p => p.status === 'Vendido' || p.status === 'Devuelto').length;
+  
+  // Conteo de deudas pendientes
+  const pendingDebts = products.filter(p => p.paymentMethod !== 'Efectivo' && p.cardPaid === 'No');
+  const debtCount = pendingDebts.length;
 
   document.getElementById('badge-stock-count').innerText = stockCount;
   document.getElementById('badge-history-count').innerText = historyCount;
+  document.getElementById('badge-debt-count').innerText = debtCount;
+
+  const nuPending = pendingDebts.filter(p => p.paymentMethod === 'Nu').length;
+  const rappiPending = pendingDebts.filter(p => p.paymentMethod === 'Rappi').length;
+
+  const countNuElem = document.getElementById('count-pending-nu');
+  const countRappiElem = document.getElementById('count-pending-rappi');
+  if (countNuElem) countNuElem.innerText = nuPending;
+  if (countRappiElem) countRappiElem.innerText = rappiPending;
+
   renderSubFilters();
 }
 
@@ -296,6 +376,41 @@ function confirmBulkDelete() {
   });
 }
 
+// Modal de Pago de Corte Completo
+function openCutPaymentModal(cardName) {
+  const pendingForCard = products.filter(p => p.paymentMethod === cardName && p.cardPaid === 'No');
+  if (pendingForCard.length === 0) {
+    return alert(`No tienes compras pendientes en Tarjeta ${cardName}.`);
+  }
+
+  const totalAmount = pendingForCard.reduce((sum, p) => sum + (parseFloat(p.cost) || 0), 0);
+  pendingCutCard = cardName;
+
+  document.getElementById('cutPaymentMessage').innerText = `¿Confirmas que pagaste el corte de Tarjeta ${cardName}? Se marcarán como pagadas ${pendingForCard.length} compras por un total de ${formatCurrency(totalAmount)}.`;
+  document.getElementById('cutPaymentModal').style.display = 'flex';
+}
+
+function closeCutPaymentModal() {
+  document.getElementById('cutPaymentModal').style.display = 'none';
+  pendingCutCard = null;
+}
+
+function confirmCutPayment() {
+  if (!pendingCutCard) return;
+
+  const batch = db.batch();
+  const pendingForCard = products.filter(p => p.paymentMethod === pendingCutCard && p.cardPaid === 'No');
+
+  pendingForCard.forEach(prod => {
+    const docRef = db.collection("productos").doc(prod.id);
+    batch.update(docRef, { cardPaid: 'Si' });
+  });
+
+  batch.commit().then(() => {
+    closeCutPaymentModal();
+  });
+}
+
 function handleSort(columnKey) {
   if (currentSortColumn === columnKey) {
     currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -308,7 +423,7 @@ function handleSort(columnKey) {
 }
 
 function updateSortIcons() {
-  const headers = ['name', 'paymentMethod', 'cardPaid', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining', 'status'];
+  const headers = ['name', 'paymentMethod', 'cardPaid', 'platform', 'cost', 'targetPrice', 'profit', 'buyDate', 'daysInStock', 'daysRemaining', 'status', 'debtStatus'];
   headers.forEach(h => {
     const icon = document.getElementById(`sort-${h}`);
     if (!icon) return;
@@ -328,15 +443,19 @@ function render() {
   const filterMonth = monthFilterSelect.value;
   const query = searchInput.value.toLowerCase().trim();
 
-  // 1. Filtrar primero por la Pestaña Principal
+  // 1. Filtrado por Pestaña
   let filteredProducts = products.filter(prod => {
     if (currentView === 'stock') {
       if (prod.status !== 'Disponible') return false;
       if (currentSubFilter === 'TRANSIT' && prod.arrivalDate) return false;
       if (currentSubFilter === 'WAREHOUSE' && !prod.arrivalDate) return false;
-    } else {
+    } else if (currentView === 'history') {
       if (prod.status !== 'Vendido' && prod.status !== 'Devuelto') return false;
       if (currentSubFilter !== 'ALL' && prod.status !== currentSubFilter) return false;
+    } else if (currentView === 'debts') {
+      // Vista de Deudas: solo compras con tarjeta y pendientes de pago
+      if (prod.paymentMethod === 'Efectivo' || prod.cardPaid !== 'No') return false;
+      if (currentSubFilter !== 'ALL' && prod.paymentMethod !== currentSubFilter) return false;
     }
 
     if (filterMonth !== 'ALL' && (!prod.buyDate || !prod.buyDate.startsWith(filterMonth))) return false;
@@ -345,14 +464,13 @@ function render() {
       const matchName = prod.name && prod.name.toLowerCase().includes(query);
       const matchPlatform = prod.platform && prod.platform.toLowerCase().includes(query);
       const matchPay = prod.paymentMethod && prod.paymentMethod.toLowerCase().includes(query);
-      const matchCardPaid = prod.cardPaid && (prod.cardPaid === 'Si' ? 'pagada' : 'pendiente').includes(query);
-      if (!matchName && !matchPlatform && !matchPay && !matchCardPaid) return false;
+      if (!matchName && !matchPlatform && !matchPay) return false;
     }
 
     return true;
   });
 
-  // 2. Ordenar productos
+  // 2. Ordenamiento
   if (currentSortColumn) {
     filteredProducts.sort((a, b) => {
       let valA, valB;
@@ -370,6 +488,9 @@ function render() {
         const targetB = parseFloat(b.targetPrice) || 0;
         const actualB = b.actualPrice ? parseFloat(b.actualPrice) : targetB;
         valB = b.status === 'Vendido' ? (actualB - costB) : (b.status === 'Devuelto' ? 0 : targetB - costB);
+      } else if (currentSortColumn === 'debtStatus') {
+        valA = a.status === 'Vendido' ? 1 : 0;
+        valB = b.status === 'Vendido' ? 1 : 0;
       } else if (currentSortColumn === 'daysInStock') {
         const startA = a.arrivalDate || a.buyDate;
         valA = calculateDays(startA, a.sellDate);
@@ -378,9 +499,6 @@ function render() {
       } else if (currentSortColumn === 'daysRemaining') {
         valA = getReturnRemainingDays(a.arrivalDate);
         valB = getReturnRemainingDays(b.arrivalDate);
-      } else if (currentSortColumn === 'cardPaid') {
-        valA = (a.cardPaid || 'Si').toLowerCase();
-        valB = (b.cardPaid || 'Si').toLowerCase();
       } else {
         valA = (a[currentSortColumn] || '').toString().toLowerCase();
         valB = (b[currentSortColumn] || '').toString().toLowerCase();
@@ -393,13 +511,14 @@ function render() {
   } else {
     filteredProducts.sort((a, b) => {
       if (currentView === 'stock') {
-        // En stock: los que tienen menos días de devolución primero
         return getReturnRemainingDays(a.arrivalDate) - getReturnRemainingDays(b.arrivalDate);
-      } else {
-        // En historial: ventas más recientes arriba
+      } else if (currentView === 'history') {
         const dateA = a.sellDate || a.buyDate || '';
         const dateB = b.sellDate || b.buyDate || '';
         return dateB.localeCompare(dateA);
+      } else {
+        // En deudas: las compras más antiguas primero para pagar a tiempo
+        return (a.buyDate || '').localeCompare(b.buyDate || '');
       }
     });
   }
@@ -417,11 +536,70 @@ function render() {
     selectionBanner.style.display = 'none';
   }
 
-  // 4. Renderizado de Tarjetas según pestaña activa
+  // 4. Renderizar Tarjetas
   renderMetricsCards(metricsSource);
 
-  // 5. Renderizar filas de tabla
-  filteredProducts.forEach((prod) => {
+  // 5. Renderizar Filas de Tabla
+  if (currentView === 'debts') {
+    renderDebtRows(filteredProducts);
+  } else {
+    renderStandardRows(filteredProducts);
+  }
+
+  if (filteredProducts.length === 0) {
+    let emptyMsg = '';
+    if (currentView === 'stock') emptyMsg = 'No hay productos en stock o en camino en este momento.';
+    else if (currentView === 'history') emptyMsg = 'No hay productos en el historial para este filtro.';
+    else emptyMsg = '🎉 ¡Felicitaciones! No tienes deudas pendientes en tarjetas.';
+
+    const colSpan = currentView === 'debts' ? 8 : 13;
+    inventoryList.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 25px; color: #9ca3af;">${emptyMsg}</td></tr>`;
+  }
+}
+
+// Renderizado de Filas para Deudas
+function renderDebtRows(productsList) {
+  productsList.forEach(prod => {
+    const cost = parseFloat(prod.cost) || 0;
+    const paymentBadge = formatPaymentBadge(prod.paymentMethod);
+
+    // Semáforo de cobertura: ¿Ya se cobró o sigue financiado en stock?
+    let trafficBadge = '';
+    let productStatusText = '';
+
+    if (prod.status === 'Vendido') {
+      trafficBadge = `<span class="traffic-badge covered">🟢 Dinero en Mano (Cobrado)</span>`;
+      productStatusText = `<span class="time-badge sold">Vendido</span>`;
+    } else {
+      trafficBadge = `<span class="traffic-badge uncovered">🟡 Pendiente en Stock</span>`;
+      productStatusText = prod.arrivalDate 
+        ? `<span class="time-badge">En bodega</span>` 
+        : `<span class="time-badge">🚚 En camino</span>`;
+    }
+
+    const row = document.createElement('tr');
+    if (selectedProductIds.has(prod.id)) row.className = 'row-selected';
+    row.onclick = (e) => toggleProductSelection(prod.id, e);
+
+    row.innerHTML = `
+      <td><strong>${escapeHtml(prod.name)}</strong></td>
+      <td>${paymentBadge}</td>
+      <td><strong class="text-red">${formatCurrency(cost)}</strong></td>
+      <td>${trafficBadge}</td>
+      <td>${escapeHtml(prod.platform)}</td>
+      <td>${prod.buyDate || '-'}</td>
+      <td>${productStatusText}</td>
+      <td>
+        <button class="btn-quick-pay" onclick="toggleCardPaidStatus('${prod.id}', 'Si')">✅ Pagar</button>
+      </td>
+    `;
+    inventoryList.appendChild(row);
+  });
+}
+
+// Renderizado de Filas para Stock e Historial
+function renderStandardRows(productsList) {
+  productsList.forEach((prod) => {
     const cost = parseFloat(prod.cost) || 0;
     const targetPrice = parseFloat(prod.targetPrice) || 0;
     const actualPrice = prod.actualPrice ? parseFloat(prod.actualPrice) : targetPrice;
@@ -516,22 +694,15 @@ function render() {
     `;
     inventoryList.appendChild(row);
   });
-
-  if (filteredProducts.length === 0) {
-    const emptyMsg = currentView === 'stock' 
-      ? 'No hay productos en stock o en camino en este momento.' 
-      : 'No hay productos en el historial para este filtro.';
-    inventoryList.innerHTML = `<tr><td colspan="13" style="text-align:center; padding: 25px; color: #9ca3af;">${emptyMsg}</td></tr>`;
-  }
 }
 
-// Renderizado Dinámico de las 4 Tarjetas de Métricas
+// Renderizado de Tarjetas según Pestaña Activa
 function renderMetricsCards(sourceList) {
   const grid = document.getElementById('metrics-grid');
 
   if (currentView === 'stock') {
     let stockCapital = 0;
-    let cardDebt = 0;
+    let projectedRevenue = 0;
     let projectedProfit = 0;
     let inTransit = 0;
     let inWarehouse = 0;
@@ -541,12 +712,8 @@ function renderMetricsCards(sourceList) {
       const target = parseFloat(prod.targetPrice) || 0;
 
       stockCapital += cost;
+      projectedRevenue += target;
       projectedProfit += (target - cost);
-
-      // Deuda de tarjeta: compras con tarjeta pendientes de pago
-      if (prod.paymentMethod !== 'Efectivo' && prod.cardPaid === 'No') {
-        cardDebt += cost;
-      }
 
       if (prod.arrivalDate) inWarehouse++;
       else inTransit++;
@@ -562,15 +729,15 @@ function renderMetricsCards(sourceList) {
       </div>
 
       <div class="card-summary">
-        <p>Deuda Tarjetas (Stock)</p>
-        <h2 class="${cardDebt > 0 ? 'text-red' : 'text-green'}">${formatCurrency(cardDebt)}</h2>
-        <span class="sub-text text-gray">${cardDebt > 0 ? '⏳ Pendiente por girar' : '✅ Todo saldado'}</span>
+        <p>Venta Estimada Total</p>
+        <h2 class="text-blue">${formatCurrency(projectedRevenue)}</h2>
+        <span class="sub-text text-gray">Ingreso bruto proyectado</span>
       </div>
 
       <div class="card-summary">
         <p>Ganancia Proyectada</p>
         <h2 class="text-est">${formatCurrency(projectedProfit)}</h2>
-        <span class="sub-text text-gray">Venta estimada al 100%</span>
+        <span class="sub-text text-gray">Margen esperado limpio</span>
       </div>
 
       <div class="card-summary">
@@ -579,7 +746,7 @@ function renderMetricsCards(sourceList) {
         <span class="sub-text text-gray">🚚 ${inTransit} en camino</span>
       </div>
     `;
-  } else {
+  } else if (currentView === 'history') {
     let capitalRecovered = 0;
     let realizedProfit = 0;
     let totalCostSold = 0;
@@ -600,7 +767,7 @@ function renderMetricsCards(sourceList) {
         const start = prod.arrivalDate || prod.buyDate;
         totalDaysSold += calculateDays(start, prod.sellDate);
       } else if (prod.status === 'Devuelto') {
-        capitalRecovered += cost; // Reembolsado 100%
+        capitalRecovered += cost;
         returnCount++;
       }
     });
@@ -631,6 +798,52 @@ function renderMetricsCards(sourceList) {
         <p>Velocidad de Rotación</p>
         <h2 class="text-blue">${avgDays} días</h2>
         <span class="sub-text text-gray">Tiempo promedio de venta</span>
+      </div>
+    `;
+  } else {
+    // Métricas exclusivas para Deudas y Tarjetas
+    let totalDebt = 0;
+    let debtNu = 0;
+    let debtRappi = 0;
+    let debtOther = 0;
+    let coveredDebt = 0;
+
+    sourceList.forEach(prod => {
+      const cost = parseFloat(prod.cost) || 0;
+      totalDebt += cost;
+
+      if (prod.paymentMethod === 'Nu') debtNu += cost;
+      else if (prod.paymentMethod === 'Rappi') debtRappi += cost;
+      else debtOther += cost;
+
+      if (prod.status === 'Vendido') {
+        coveredDebt += cost;
+      }
+    });
+
+    grid.innerHTML = `
+      <div class="card-summary">
+        <p>Deuda Total Tarjetas</p>
+        <h2 class="text-red">${formatCurrency(totalDebt)}</h2>
+        <span class="sub-text text-gray">${sourceList.length} compra${sourceList.length !== 1 ? 's' : ''} pendiente${sourceList.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Extracto Nu 💜</p>
+        <h2 class="text-nu">${formatCurrency(debtNu)}</h2>
+        <span class="sub-text text-gray">Pendiente por transferir</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Extracto RappiCard 🧡</p>
+        <h2 class="text-rappi">${formatCurrency(debtRappi)}</h2>
+        <span class="sub-text text-gray">Pendiente por transferir</span>
+      </div>
+
+      <div class="card-summary">
+        <p>Deuda Respaldada</p>
+        <h2 class="text-green">${formatCurrency(coveredDebt)}</h2>
+        <span class="sub-text text-gray">Cobrado listo para pagar</span>
       </div>
     `;
   }
@@ -828,3 +1041,6 @@ function escapeHtml(text) {
   div.innerText = text;
   return div.innerHTML;
 }
+
+// Inicializar encabezado de tabla al cargar
+renderTableHeader();

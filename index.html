@@ -27,6 +27,9 @@
     <button type="button" class="tab-btn" id="tab-history" onclick="switchView('history')">
       📊 Historial de Ventas <span class="tab-badge" id="badge-history-count">0</span>
     </button>
+    <button type="button" class="tab-btn" id="tab-debts" onclick="switchView('debts')">
+      💳 Deudas y Tarjetas <span class="tab-badge text-badge-warning" id="badge-debt-count">0</span>
+    </button>
   </div>
 
   <!-- Controles y Filtros -->
@@ -34,7 +37,7 @@
     <div class="filter-grid">
       <div class="filter-group">
         <label for="search-input">Buscar Producto / Plataforma / Pago:</label>
-        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Nu, Pendiente..." oninput="render()">
+        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Nu, Amazon..." oninput="render()">
       </div>
 
       <div class="filter-group">
@@ -70,11 +73,22 @@
 
   <!-- Tarjetas de Métricas Dinámicas según la Pestaña -->
   <div class="summary-grid" id="metrics-grid">
-    <!-- Renderizado dinámicamente según 'stock' o 'history' -->
+    <!-- Renderizado dinámicamente según 'stock', 'history' o 'debts' -->
+  </div>
+
+  <!-- Barra de Acciones Específica para Deudas (Pago de Cortes) -->
+  <div id="debt-actions-bar" class="debt-actions-bar" style="display: none;">
+    <div class="debt-bar-text">
+      <strong>⚡ Pagos de Extracto / Corte:</strong> Marca como saldadas todas las compras de una tarjeta en un solo paso:
+    </div>
+    <div class="debt-bar-buttons">
+      <button type="button" class="btn-pay-cut nu" onclick="openCutPaymentModal('Nu')">💜 Pagar Corte Nu (<span id="count-pending-nu">0</span>)</button>
+      <button type="button" class="btn-pay-cut rappi" onclick="openCutPaymentModal('Rappi')">🧡 Pagar Corte Rappi (<span id="count-pending-rappi">0</span>)</button>
+    </div>
   </div>
 
   <!-- Formulario de Registro Plegable -->
-  <div class="form-card">
+  <div class="form-card" id="product-form-card">
     <div class="form-header" onclick="toggleForm()">
       <h3>➕ Registrar Producto</h3>
       <span id="toggle-icon">▼</span>
@@ -142,22 +156,8 @@
   <!-- Tabla de Inventario Ordenable -->
   <div class="table-container">
     <table>
-      <thead>
-        <tr>
-          <th class="sortable-th" onclick="handleSort('name')">Producto <span class="sort-icon" id="sort-name">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('paymentMethod')">Pago <span class="sort-icon" id="sort-paymentMethod">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('cardPaid')">Tarjeta Pagada <span class="sort-icon" id="sort-cardPaid">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('platform')">Plataforma <span class="sort-icon" id="sort-platform">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('cost')">Costo <span class="sort-icon" id="sort-cost">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('targetPrice')" id="th-target-price">Venta Obj. / Real <span class="sort-icon" id="sort-targetPrice">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('profit')">Ganancia / ROI <span class="sort-icon" id="sort-profit">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('buyDate')">Fecha Compra <span class="sort-icon" id="sort-buyDate">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('daysInStock')">Tiempo Stock <span class="sort-icon" id="sort-daysInStock">↕</span></th>
-          <th class="sortable-th" onclick="handleSort('daysRemaining')">Plazo Devolución <span class="sort-icon" id="sort-daysRemaining">↕</span></th>
-          <th>Link</th>
-          <th class="sortable-th" onclick="handleSort('status')">Estado <span class="sort-icon" id="sort-status">↕</span></th>
-          <th>Acciones</th>
-        </tr>
+      <thead id="table-head">
+        <!-- Generado dinámicamente según la pestaña -->
       </thead>
       <tbody id="inventory-list">
         <!-- Generado dinámicamente -->
@@ -258,6 +258,18 @@
     <div class="modal-buttons">
       <button class="btn-cancel" onclick="closeBulkDeleteModal()">Cancelar</button>
       <button class="btn-delete" style="width: auto; padding: 10px 16px;" onclick="confirmBulkDelete()">Eliminar Todo el Lote</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmación de Pago de Corte Completo -->
+<div id="cutPaymentModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>💳 Confirmar Pago de Corte</h3>
+    <p id="cutPaymentMessage">¿Deseas marcar todas las compras pendientes como pagadas?</p>
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="closeCutPaymentModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmCutPayment()">Confirmar Pago</button>
     </div>
   </div>
 </div>
