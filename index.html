@@ -37,7 +37,7 @@
     <div class="filter-grid">
       <div class="filter-group">
         <label for="search-input">Buscar Producto / Plataforma / Pago:</label>
-        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Nu, Amazon..." oninput="render()">
+        <input type="text" id="search-input" placeholder="🔍 Ej: Hidrolavadora, Nu, Amazon..." oninput="debouncedRender()">
       </div>
 
       <div class="filter-group">
@@ -80,10 +80,12 @@
   <div id="debt-actions-bar" class="debt-actions-bar" style="display: none;">
     <div class="debt-bar-text">
       <strong>⚡ Pagos de Extracto / Corte:</strong> Marca como saldadas todas las compras de una tarjeta en un solo paso:
+      <div id="card-cycle-alerts" class="card-cycle-alerts"></div>
     </div>
     <div class="debt-bar-buttons">
       <button type="button" class="btn-pay-cut nu" onclick="openCutPaymentModal('Nu')">💜 Pagar Corte Nu (<span id="count-pending-nu">0</span>)</button>
       <button type="button" class="btn-pay-cut rappi" onclick="openCutPaymentModal('Rappi')">🧡 Pagar Corte Rappi (<span id="count-pending-rappi">0</span>)</button>
+      <button type="button" class="btn-card-settings" onclick="openCardSettingsModal()" title="Configurar días de corte y pago">⚙️ Fechas Corte</button>
     </div>
   </div>
 
@@ -129,12 +131,20 @@
           <input type="number" step="any" id="targetPrice" placeholder="Ej: 150000" required>
         </div>
         <div>
+          <label for="quantity">Cantidad (unidades)</label>
+          <input type="number" id="quantity" min="1" max="50" value="1" title="Si compraste varias unidades en oferta se registrarán automáticamente" required>
+        </div>
+        <div>
           <label for="productUrl">Link / URL Producto</label>
           <input type="url" id="productUrl" placeholder="https://amazon.com/...">
         </div>
         <div>
           <label for="buyDate">Fecha Compra</label>
           <input type="date" id="buyDate" required>
+        </div>
+        <div>
+          <label for="arrivalDate">Fecha Llegada 📦 (Opcional)</label>
+          <input type="date" id="arrivalDate">
         </div>
         <div>
           <label for="status">Estado</label>
@@ -154,7 +164,7 @@
   </div>
 
   <!-- Tabla de Inventario Ordenable -->
-  <div class="table-container">
+  <div class="table-container" id="inventory-table-container">
     <table>
       <thead id="table-head">
         <!-- Generado dinámicamente según la pestaña -->
@@ -273,6 +283,51 @@
     </div>
   </div>
 </div>
+
+<!-- Modal para Configurar Días de Corte y Pago de Tarjetas -->
+<div id="cardSettingsModal" class="modal-overlay">
+  <div class="modal-content modal-content-large">
+    <h3>⚙️ Configurar Fechas de Corte y Pago</h3>
+    <p style="margin-bottom: 15px;">Ajusta los días de corte y límite de pago para recibir alertas oportunas y calcular el flujo de caja:</p>
+    <form id="card-settings-form" onsubmit="saveCardSettings(event)">
+      <div class="card-settings-grid">
+        <div class="card-setting-box">
+          <h4 style="color: #7e22ce; margin-bottom: 8px;">💜 Tarjeta Nu</h4>
+          <label for="nu-cut-day">Día de Corte (1-31):</label>
+          <input type="number" id="nu-cut-day" min="1" max="31" required>
+          <label for="nu-due-day" style="margin-top: 6px;">Día Límite de Pago (1-31):</label>
+          <input type="number" id="nu-due-day" min="1" max="31" required>
+        </div>
+        <div class="card-setting-box">
+          <h4 style="color: #ea580c; margin-bottom: 8px;">🧡 RappiCard</h4>
+          <label for="rappi-cut-day">Día de Corte (1-31):</label>
+          <input type="number" id="rappi-cut-day" min="1" max="31" required>
+          <label for="rappi-due-day" style="margin-top: 6px;">Día Límite de Pago (1-31):</label>
+          <input type="number" id="rappi-due-day" min="1" max="31" required>
+        </div>
+      </div>
+      <div class="modal-buttons" style="margin-top: 20px;">
+        <button type="button" class="btn-cancel" onclick="closeCardSettingsModal()">Cancelar</button>
+        <button type="submit" class="btn-confirm">Guardar Fechas</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de Confirmación para Producto Devuelto -->
+<div id="returnModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>📦 Confirmar Devolución a Tienda</h3>
+    <p id="returnModalMessage">¿Confirmas que devolviste este producto y recibiste el reembolso de tu compra?</p>
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="closeReturnModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmReturn()">Sí, Marcar Devuelto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Contenedor Flotante de Notificaciones Toast -->
+<div id="toast-container" class="toast-container"></div>
 
 <script src="script.js"></script>
 </body>
